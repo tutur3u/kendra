@@ -52,63 +52,70 @@ export function SiteHeader() {
 		<>
 			<header
 				className={cn(
-					shell,
-					"sticky top-0 z-50 flex items-center justify-between gap-4 py-4 md:py-8 transition-all duration-300 animate-[header-drop_620ms_ease_both]",
-					isScrolled ? "bg-white/80 backdrop-blur-md border-b border-line py-4 md:py-6" : "bg-transparent border-b border-transparent"
+					"sticky top-0 z-50 border-b transition-all duration-300 animate-[header-drop_620ms_ease_both]",
+					isScrolled ? "border-line bg-white/80 backdrop-blur-md" : "border-transparent bg-transparent",
 				)}
 			>
-				<Link
-					href="/"
-					className="inline-flex min-w-max items-center gap-2 md:gap-4 group"
-					aria-label={`${site.name} home`}
+				<div
+					className={cn(
+						shell,
+						"flex items-center justify-between gap-4 transition-all duration-300",
+						isScrolled ? "py-4 md:py-6" : "py-4 md:py-8",
+					)}
 				>
-					<Mark />
-					<div className="flex flex-col">
-						<strong className="block font-serif text-[1rem] md:text-[1.2rem] leading-none tracking-tight group-hover:italic transition-all">
-							{site.name}
-						</strong>
-						<span className="mt-1 block text-[0.5rem] md:text-[0.6rem] font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-accent">
-							Portfolio
-						</span>
-					</div>
-				</Link>
+					<Link
+						href="/"
+						className="inline-flex min-w-max items-center gap-2 md:gap-4 group"
+						aria-label={`${site.name} home`}
+					>
+						<Mark />
+						<div className="flex flex-col">
+							<strong className="block font-serif text-[1rem] md:text-[1.2rem] leading-none tracking-tight group-hover:italic transition-all">
+								{site.name}
+							</strong>
+							<span className="mt-1 block text-[0.5rem] md:text-[0.6rem] font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-accent">
+								Portfolio
+							</span>
+						</div>
+					</Link>
 
-				{/* Desktop Navigation */}
-				<nav
-					aria-label="Primary navigation"
-					className="hidden md:flex items-center gap-8"
-				>
-					{navigation.map((item) => {
-						const isActive =
-							item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+					{/* Desktop Navigation */}
+					<nav
+						aria-label="Primary navigation"
+						className="hidden md:flex items-center gap-8"
+					>
+						{navigation.map((item) => {
+							const isActive =
+								item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 
-						return (
-							<Link
-								key={item.href}
-								href={item.href}
-								className={cn(
-									"text-[0.75rem] font-bold uppercase tracking-[0.2em] text-ink-soft transition duration-300 hover:text-accent hover:italic",
-									isActive && "text-accent italic",
-								)}
-								aria-current={isActive ? "page" : undefined}
-							>
-								{item.label}
-							</Link>
-						);
-					})}
-				</nav>
+							return (
+								<Link
+									key={item.href}
+									href={item.href}
+									className={cn(
+										"text-[0.75rem] font-bold uppercase tracking-[0.2em] text-ink-soft transition duration-300 hover:text-accent hover:italic",
+										isActive && "text-accent italic",
+									)}
+									aria-current={isActive ? "page" : undefined}
+								>
+									{item.label}
+								</Link>
+							);
+						})}
+					</nav>
 
-				{/* Mobile Menu Toggle */}
-				<button
-					onClick={() => setIsMenuOpen(!isMenuOpen)}
-					className="flex flex-col items-end gap-1.5 p-2 md:hidden"
-					aria-expanded={isMenuOpen}
-					aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-				>
-					<span className={cn("h-0.5 bg-ink transition-all duration-300", isMenuOpen ? "w-6 translate-y-2 rotate-45" : "w-6")} />
-					<span className={cn("h-0.5 bg-ink transition-all duration-300", isMenuOpen ? "opacity-0" : "w-4")} />
-					<span className={cn("h-0.5 bg-ink transition-all duration-300", isMenuOpen ? "w-6 -translate-y-2 -rotate-45" : "w-6")} />
-				</button>
+					{/* Mobile Menu Toggle */}
+					<button
+						onClick={() => setIsMenuOpen(!isMenuOpen)}
+						className="flex flex-col items-end gap-1.5 p-2 md:hidden"
+						aria-expanded={isMenuOpen}
+						aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+					>
+						<span className={cn("h-0.5 bg-ink transition-all duration-300", isMenuOpen ? "w-6 translate-y-2 rotate-45" : "w-6")} />
+						<span className={cn("h-0.5 bg-ink transition-all duration-300", isMenuOpen ? "opacity-0" : "w-4")} />
+						<span className={cn("h-0.5 bg-ink transition-all duration-300", isMenuOpen ? "w-6 -translate-y-2 -rotate-45" : "w-6")} />
+					</button>
+				</div>
 			</header>
 
 			{/* Mobile Navigation Overlay */}
