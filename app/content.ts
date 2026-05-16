@@ -35,20 +35,13 @@ export const performanceModes = [
 
 export const demos = [
 	{
-		title: "Interactive Sample Reel",
-		type: "YouTube reel",
+		title: "Kendra Braun - Interactive",
+		type: "Audio reel",
 		status: "Available",
 		description:
 			"A character-forward sample reel for interactive and narrative voice work.",
-		youtubeId: "IVSdkLAqq9c",
-	},
-	{
-		title: "Commercial Reel",
-		type: "Audio reel",
-		status: "Coming soon",
-		description:
-			"Reserved for the upcoming commercial reel once the final audio file is ready.",
-		audioSrc: "",
+		audioSrc: "/audios/kendra-braun-interactive.mp3",
+		duration: "1:20",
 	},
 ];
 
@@ -146,8 +139,7 @@ export const experienceGroups = [
 				project: "Pepe Luu",
 				role: "Luco",
 				visual: {
-					image:
-						"https://submarinechannel.com/wp-content/uploads/2018/02/The-Wolves-of-Mangotown_Still-4.png",
+					image: "/images/pepe-luu-gift.jpg",
 					imagePosition: "center",
 					tone: "animation",
 				},

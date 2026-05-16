@@ -22,7 +22,7 @@ export function ClientStrip() {
 			<div className="flex flex-col gap-8">
 				<div className="flex justify-between items-end max-[620px]:flex-col max-[620px]:items-start max-[620px]:gap-2">
 					<h2 id="client-strip-title" className={cn(labelText)}>
-						Featured Partnerships
+						Notable Clients
 					</h2>
 					<p className="text-[0.8rem] font-medium text-ink-soft uppercase tracking-wider">
 						Commercial — Corporate — Broadcast

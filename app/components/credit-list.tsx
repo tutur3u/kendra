@@ -75,12 +75,6 @@ function CreditVisualTile({
 					</span>
 				</div>
 			)}
-			<div className="absolute inset-x-3 bottom-3 flex items-center gap-2">
-				<span className="h-px flex-1 bg-current/30" />
-				<span className="font-mono text-[0.58rem] uppercase tracking-[0.18em] opacity-70">
-					VO
-				</span>
-			</div>
 		</div>
 	);
 }
@@ -152,7 +146,7 @@ export function CreditList({ title, items }: CreditListProps) {
 		<section className="border-b border-white/10 py-[clamp(3.5rem,8vw,6.5rem)] last:border-0">
 			<div className="mb-[clamp(2rem,5vw,4rem)] flex items-end justify-between gap-8 max-[820px]:items-start">
 				<div className="min-w-0">
-					<span className={cn(labelText, "text-accent")}>Credits</span>
+					<span className={cn(labelText, "text-accent")}>Notable Clients</span>
 					<h2 className="mt-4 max-w-[760px] text-balance font-serif text-[clamp(3.15rem,8vw,7rem)] italic leading-[0.82] tracking-tight text-white">
 						{title}
 					</h2>
@@ -198,7 +192,7 @@ export function CreditList({ title, items }: CreditListProps) {
 											{item.project}
 										</strong>
 									</div>
-									<div className="mt-auto flex min-h-[64px] items-end justify-between gap-4 border-t border-white/12 pt-5">
+									<div className="mt-auto flex min-h-[48px] items-end">
 										<span
 											className={cn(
 												bodyText,
@@ -206,9 +200,6 @@ export function CreditList({ title, items }: CreditListProps) {
 											)}
 										>
 											{item.role}
-										</span>
-										<span className="grid h-8 w-8 shrink-0 place-items-center border border-white/18 font-mono text-[0.52rem] uppercase tracking-[0.14em] text-white/44">
-											VO
 										</span>
 									</div>
 								</div>

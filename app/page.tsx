@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { AudioReels } from "./components/audio-reels";
 import { ClientStrip } from "./components/client-strip";
-import { DemoCard } from "./components/demo-card";
 import {
 	bodyText,
 	cn,
@@ -14,12 +14,9 @@ import {
 	sectionHeading,
 	shell,
 } from "./components/ui";
-import { Waveform } from "./components/waveform";
 import {
-	availability,
 	bio,
 	demos,
-	notableClients,
 	performanceModes,
 	site,
 	studioSpecs,
@@ -82,7 +79,7 @@ export default function Home() {
 	return (
 		<main className="overflow-hidden bg-white selection:bg-accent selection:text-white">
 			{/* Hero Section - Editorial Spread */}
-			<section className={cn(shell, "pt-[clamp(40px,8vw,80px)] pb-[clamp(60px,10vw,120px)]")}>
+			<section className={cn(shell, "pt-[clamp(40px,8vw,80px)] pb-[clamp(32px,5vw,56px)]")}>
 				<div className="grid grid-cols-[1fr_minmax(300px,460px)] gap-12 md:gap-16 max-[920px]:grid-cols-1">
 					<motion.div 
 						className="flex flex-col justify-end pb-8 max-[920px]:order-2"
@@ -163,8 +160,13 @@ export default function Home() {
 					</motion.div>
 				</div>
 
-				<motion.div 
-					className="mt-12 md:mt-16 grid grid-cols-3 border-t border-line pt-8 max-[620px]:grid-cols-1 max-[620px]:gap-6"
+			</section>
+
+			<AudioReels items={demos} />
+
+			<section className={cn(shell, "pb-[clamp(48px,8vw,96px)]")}>
+				<motion.div
+					className="grid grid-cols-3 border-t border-line pt-8 max-[620px]:grid-cols-1 max-[620px]:gap-6"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 0.8, duration: 1 }}
@@ -206,34 +208,6 @@ export default function Home() {
 			>
 				<ClientStrip />
 			</motion.div>
-
-			{/* Demos Section */}
-			<section id="demos" className={sectionGrid}>
-				<motion.div 
-					className="sticky top-[100px] self-start max-[920px]:static mb-8 md:mb-0"
-					initial={{ opacity: 0, x: -20 }}
-					whileInView={{ opacity: 1, x: 0 }}
-					viewport={{ once: true, margin: "-100px" }}
-					transition={{ duration: 0.8 }}
-				>
-					<span className={labelText}>Reels & Demos</span>
-					<h2 className={cn(sectionHeading, "mt-4 italic")}>Audio Proof</h2>
-					<p className={cn(bodyText, "mt-4 md:mt-6 max-w-[280px]")}>
-						A curated selection of performance samples across commercial and narrative categories.
-					</p>
-				</motion.div>
-				<motion.div 
-					className="grid gap-px bg-line border border-line"
-					initial={{ opacity: 0, y: 30 }}
-					whileInView={{ opacity: 1, y: 0 }}
-					viewport={{ once: true, margin: "-100px" }}
-					transition={{ duration: 0.8, delay: 0.2 }}
-				>
-					{demos.map((demo, index) => (
-						<DemoCard key={demo.title} demo={demo} featured={index === 0} />
-					))}
-				</motion.div>
-			</section>
 
 			{/* About Section */}
 			<section className="bg-surface">
