@@ -67,7 +67,7 @@ function CreditVisualTile({
 				<div className="absolute inset-3" style={imageStyle} />
 			) : (
 				<div className="absolute inset-0 grid place-items-center px-4 text-center">
-					<span className="font-serif text-[clamp(1.15rem,2vw,1.9rem)] italic leading-none tracking-tight">
+					<span className="block max-w-full whitespace-nowrap pr-1 font-serif text-[clamp(1rem,1.6vw,1.55rem)] italic leading-none tracking-tight">
 						{visual?.label ?? project}
 					</span>
 				</div>
