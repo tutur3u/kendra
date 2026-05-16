@@ -1,16 +1,1 @@
-<svg width="960" height="1200" viewBox="0 0 960 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="960" height="1200" rx="28" fill="#F8FAF7"/>
-  <rect x="42" y="42" width="876" height="1116" rx="24" stroke="#1B1D1B" stroke-width="3"/>
-  <path d="M118 1010C188 866 308 782 480 782C652 782 772 866 842 1010" stroke="#7EB99E" stroke-width="18" stroke-linecap="round"/>
-  <circle cx="480" cy="438" r="182" fill="#E7F0E9" stroke="#1B1D1B" stroke-width="10"/>
-  <path d="M320 466C342 358 394 304 480 304C566 304 618 358 640 466" stroke="#1B1D1B" stroke-width="12" stroke-linecap="round"/>
-  <path d="M364 510C394 554 432 576 480 576C528 576 566 554 596 510" stroke="#1B1D1B" stroke-width="10" stroke-linecap="round"/>
-  <path d="M156 202H338" stroke="#7EB99E" stroke-width="16" stroke-linecap="round"/>
-  <path d="M622 202H804" stroke="#7EB99E" stroke-width="16" stroke-linecap="round"/>
-  <path d="M178 246H284" stroke="#1B1D1B" stroke-width="8" stroke-linecap="round"/>
-  <path d="M676 246H782" stroke="#1B1D1B" stroke-width="8" stroke-linecap="round"/>
-  <path d="M142 650C170 650 170 610 198 610C226 610 226 690 254 690C282 690 282 628 310 628C338 628 338 662 366 662" stroke="#7EB99E" stroke-width="10" stroke-linecap="round"/>
-  <path d="M594 662C622 662 622 628 650 628C678 628 678 690 706 690C734 690 734 610 762 610C790 610 790 650 818 650" stroke="#7EB99E" stroke-width="10" stroke-linecap="round"/>
-  <text x="480" y="1030" text-anchor="middle" fill="#1B1D1B" font-family="Georgia, serif" font-size="54" font-weight="700">Kendra Braun</text>
-  <text x="480" y="1092" text-anchor="middle" fill="#496455" font-family="Arial, sans-serif" font-size="28" letter-spacing="6">VOICE ACTOR</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1200" fill="none" viewBox="0 0 960 1200"><rect width="960" height="1200" fill="#F8FAF7" rx="28"/><rect width="876" height="1116" x="42" y="42" stroke="#1B1D1B" stroke-width="3" rx="24"/><path stroke="#7EB99E" stroke-linecap="round" stroke-width="18" d="M118 1010C188 866 308 782 480 782C652 782 772 866 842 1010"/><circle cx="480" cy="438" r="182" fill="#E7F0E9" stroke="#1B1D1B" stroke-width="10"/><path stroke="#1B1D1B" stroke-linecap="round" stroke-width="12" d="M320 466C342 358 394 304 480 304C566 304 618 358 640 466"/><path stroke="#1B1D1B" stroke-linecap="round" stroke-width="10" d="M364 510C394 554 432 576 480 576C528 576 566 554 596 510"/><path stroke="#7EB99E" stroke-linecap="round" stroke-width="16" d="M156 202H338"/><path stroke="#7EB99E" stroke-linecap="round" stroke-width="16" d="M622 202H804"/><path stroke="#1B1D1B" stroke-linecap="round" stroke-width="8" d="M178 246H284"/><path stroke="#1B1D1B" stroke-linecap="round" stroke-width="8" d="M676 246H782"/><path stroke="#7EB99E" stroke-linecap="round" stroke-width="10" d="M142 650C170 650 170 610 198 610C226 610 226 690 254 690C282 690 282 628 310 628C338 628 338 662 366 662"/><path stroke="#7EB99E" stroke-linecap="round" stroke-width="10" d="M594 662C622 662 622 628 650 628C678 628 678 690 706 690C734 690 734 610 762 610C790 610 790 650 818 650"/><text x="480" y="1030" fill="#1B1D1B" font-family="Georgia, serif" font-size="54" font-weight="700" text-anchor="middle">Kendra Braun</text><text x="480" y="1092" fill="#496455" font-family="Arial, sans-serif" font-size="28" letter-spacing="6" text-anchor="middle">VOICE ACTOR</text></svg>
