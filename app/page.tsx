@@ -62,7 +62,6 @@ export default function Home() {
 						initial="initial"
 						animate="animate"
 					>
-						<motion.div variants={fadeInUp} className={cn(labelText, "mb-6")}>Voice Artist Portfolio — Vol. 01</motion.div>
 						<motion.h1
 							variants={fadeInUp}
 							className={cn(
@@ -97,32 +96,35 @@ export default function Home() {
 						</div>
 					</motion.div>
 
-					<motion.div 
-						className="relative aspect-[4/5] overflow-hidden bg-mist max-[920px]:order-1 max-[920px]:aspect-[1/1.1] max-[620px]:aspect-[4/5]"
+					<motion.div
+						className="relative aspect-[4/5] overflow-hidden border border-line bg-[#fff6ed] max-[920px]:order-1 max-[920px]:aspect-[1/1.1] max-[620px]:aspect-[4/5]"
 						initial={{ opacity: 0, scale: 1.05 }}
 						animate={{ opacity: 1, scale: 1 }}
 						transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
 					>
+						<div className="absolute inset-0 bg-[linear-gradient(135deg,#fff6ed_0%,#f8fbf4_48%,#f6eef0_100%)]" />
+						<div className="absolute inset-x-8 top-8 h-px bg-ink/10" />
+						<div className="absolute inset-y-8 left-8 w-px bg-ink/10" />
 						<Image
 							src={site.heroImage}
-							alt="Kendra Braun headshot"
+							alt={site.heroImageAlt}
 							fill
 							priority
-							className="object-cover grayscale transition-all duration-700 hover:grayscale-0 hover:scale-105"
+							sizes="(max-width: 920px) calc(100vw - 32px), 460px"
+							className="object-contain object-bottom p-[clamp(1.25rem,3vw,2.75rem)] drop-shadow-[0_22px_34px_rgba(10,10,10,0.18)] transition-all duration-700 hover:scale-[1.025]"
 						/>
-						<div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent mix-blend-multiply" />
 						<motion.div 
-							className="absolute bottom-6 left-6 right-6 flex items-end justify-between text-white"
+							className="absolute bottom-4 left-4 right-4 flex items-end justify-between border border-white/70 bg-white/80 px-4 py-3 text-ink shadow-[0_18px_44px_rgba(10,10,10,0.12)] backdrop-blur max-[520px]:flex-col max-[520px]:items-start max-[520px]:gap-3"
 							initial={{ opacity: 0, y: 10 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ delay: 0.6, duration: 0.8 }}
 						>
 							<div className="grid gap-1">
-								<span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] opacity-80">Location</span>
+								<span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-accent">Location</span>
 								<span className="text-sm font-medium tracking-wide">Alberta, Canada</span>
 							</div>
-							<div className="grid gap-1 text-right">
-								<span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] opacity-80">Status</span>
+							<div className="grid gap-1 text-right max-[520px]:text-left">
+								<span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-accent">Status</span>
 								<span className="flex items-center gap-2 text-sm font-medium tracking-wide">
 									<span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
 									Now Booking

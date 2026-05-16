@@ -7,7 +7,8 @@ export const site = {
 		"https://docs.google.com/document/d/1NiW02wtxJpn60TuCnWkHMYpcGXY_dV0Kqwq94DxLO0o/edit?usp=sharing",
 	gvaaUrl: "https://globalvoiceacademy.com/gvaa-rate-guide-2/",
 	location: "Alberta, Canada",
-	heroImage: "/images/kendra-resume-headshot.png",
+	heroImage: "/images/featured.png",
+	heroImageAlt: "Illustrated portrait of Kendra Braun holding a microphone",
 	clientProofImage: "/images/client-proof-placeholder.svg",
 };
 
@@ -78,33 +79,149 @@ export const experienceGroups = [
 	{
 		title: "Commercial & Corporate Experience",
 		items: [
-			{ project: "Nippon TV", role: "Canadian K" },
-			{ project: "NHK Japan Foreigner Fun", role: "Canadian Girl" },
-			{ project: "University of Alberta", role: "E-Learning Narrator" },
-			{ project: "Tower Records", role: "English Efforts Archive" },
-			{ project: "No Smoking", role: "Kid 1" },
-			{ project: "Airheart", role: "Mira Sante" },
+			{
+				project: "Nippon TV",
+				role: "Canadian K",
+				visual: {
+					image: "/images/client-nippon-tv.png",
+					imageSize: "78%",
+					tone: "broadcast",
+				},
+			},
+			{
+				project: "NHK Japan Foreigner Fun",
+				role: "Canadian Girl",
+				visual: {
+					image:
+						"https://commons.wikimedia.org/wiki/Special:FilePath/NHK_logo_2020.svg",
+					imageSize: "70%",
+					tone: "broadcast",
+				},
+			},
+			{
+				project: "University of Alberta",
+				role: "E-Learning Narrator",
+				visual: {
+					image: "/images/client-university-alberta.png",
+					imageSize: "82%",
+					tone: "institution",
+				},
+			},
+			{
+				project: "Tower Records",
+				role: "English Efforts Archive",
+				visual: {
+					image:
+						"https://commons.wikimedia.org/wiki/Special:FilePath/Tower_Records_logo.svg",
+					imageSize: "82%",
+					tone: "music",
+				},
+			},
+			{
+				project: "No Smoking",
+				role: "Kid 1",
+				visual: {
+					image:
+						"https://commons.wikimedia.org/wiki/Special:FilePath/No_smoking_symbol.svg",
+					imageSize: "58%",
+					tone: "signal",
+				},
+			},
+			{
+				project: "Airheart",
+				role: "Mira Sante",
+				visual: {
+					image:
+						"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/531180/header.jpg",
+					imagePosition: "center",
+					tone: "sky",
+				},
+			},
 		],
 	},
 	{
 		title: "Character Experience",
 		items: [
-			{ project: "Pepe Luu", role: "Luco" },
-			{ project: "The Nightmare Scheme", role: "High Safeguard Dr. Kurolein" },
-			{ project: "Chaos & Order", role: "Female Human" },
-			{ project: "Seduce Me", role: "Damien's Mother" },
-			{ project: "Cardfight Vanguard", role: "Additional Voices" },
+			{
+				project: "Pepe Luu",
+				role: "Luco",
+				visual: {
+					image:
+						"https://submarinechannel.com/wp-content/uploads/2018/02/The-Wolves-of-Mangotown_Still-4.png",
+					imagePosition: "center",
+					tone: "animation",
+				},
+			},
+			{
+				project: "The Nightmare Scheme",
+				role: "High Safeguard Dr. Kurolein",
+				visual: {
+					label: "Nightmare Scheme",
+					tone: "nightmare",
+				},
+			},
+			{
+				project: "Chaos & Order",
+				role: "Female Human",
+				visual: {
+					label: "Chaos & Order",
+					tone: "duality",
+				},
+			},
+			{
+				project: "Seduce Me",
+				role: "Damien's Mother",
+				visual: {
+					image:
+						"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/367120/header.jpg",
+					imagePosition: "center",
+					tone: "otome",
+				},
+			},
+			{
+				project: "Cardfight Vanguard",
+				role: "Additional Voices",
+				visual: {
+					image: "https://en.cf-vanguard.com/wordpress/wp-content/uploads/VGE-logo-v3.jpg",
+					imageSize: "82%",
+					tone: "cardfight",
+				},
+			},
 		],
 	},
 	{
 		title: "Training",
 		items: [
-			{ project: "ToonVox Act 1", role: "Jonathan Love & Brad Ferguson" },
-			{ project: "ToonVox Act 2", role: "Jonathan Love & Brad Ferguson" },
-			{ project: "ToonVox Act 3", role: "Jonathan Love & Brad Ferguson" },
-			{ project: "Voice GYM", role: "Training" },
-			{ project: "VoiceSPOT", role: "Training" },
-			{ project: "WCS", role: "Training" },
+			{
+				project: "ToonVox Act 1",
+				role: "Jonathan Love & Brad Ferguson",
+				visual: { label: "Act 1", tone: "training" },
+			},
+			{
+				project: "ToonVox Act 2",
+				role: "Jonathan Love & Brad Ferguson",
+				visual: { label: "Act 2", tone: "training" },
+			},
+			{
+				project: "ToonVox Act 3",
+				role: "Jonathan Love & Brad Ferguson",
+				visual: { label: "Act 3", tone: "training" },
+			},
+			{
+				project: "Voice GYM",
+				role: "Training",
+				visual: { label: "Voice GYM", tone: "studio" },
+			},
+			{
+				project: "VoiceSPOT",
+				role: "Training",
+				visual: { label: "VoiceSPOT", tone: "studio" },
+			},
+			{
+				project: "WCS",
+				role: "Training",
+				visual: { label: "WCS", tone: "studio" },
+			},
 		],
 	},
 ];

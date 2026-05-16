@@ -48,11 +48,6 @@ export function SiteHeader() {
 		};
 	}, [isMenuOpen]);
 
-	// Close menu on navigation
-	useEffect(() => {
-		setIsMenuOpen(false);
-	}, [pathname]);
-
 	return (
 		<>
 			<header

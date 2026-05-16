@@ -75,9 +75,6 @@ export function SiteFooter() {
 							{site.name} © {new Date().getFullYear()}
 						</span>
 					</div>
-					<span className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-ink-soft opacity-60">
-						Voice Artist Portfolio — Vol. 01
-					</span>
 				</div>
 			</div>
 		</footer>
