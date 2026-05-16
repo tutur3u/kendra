@@ -31,24 +31,26 @@ export default function ExperiencePage() {
 					</Link>
 				</motion.div>
 			</PageHero>
-			<div
-				className={cn(
-					shell,
-					"py-[clamp(80px,12vw,150px)]",
-				)}
-			>
-				{experienceGroups.map((group, index) => (
-					<motion.div
-						key={group.title}
-						initial={{ opacity: 0, y: 30 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true, margin: "-100px" }}
-						transition={{ duration: 0.8, delay: index * 0.1 }}
-					>
-						<CreditList title={group.title} items={group.items} />
-					</motion.div>
-				))}
-			</div>
+			<section className="bg-ink text-white">
+				<div
+					className={cn(
+						shell,
+						"py-[clamp(24px,4vw,56px)]",
+					)}
+				>
+					{experienceGroups.map((group, index) => (
+						<motion.div
+							key={group.title}
+							initial={{ opacity: 0, y: 30 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true, margin: "-100px" }}
+							transition={{ duration: 0.8, delay: index * 0.1 }}
+						>
+							<CreditList title={group.title} items={group.items} />
+						</motion.div>
+					))}
+				</div>
+			</section>
 		</main>
 	);
 }

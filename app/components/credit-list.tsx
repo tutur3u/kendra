@@ -1,3 +1,6 @@
+"use client";
+
+import { useRef } from "react";
 import { bodyText, cn, labelText } from "./ui";
 
 type CreditVisual = {
@@ -58,13 +61,13 @@ function CreditVisualTile({
 			aria-label={`${project} visual reference`}
 			role="img"
 			className={cn(
-				"relative h-[104px] w-[156px] shrink-0 overflow-hidden border border-line shadow-[0_14px_34px_rgba(10,10,10,0.08)] transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_42px_rgba(10,10,10,0.12)] max-[720px]:h-[88px] max-[720px]:w-[112px]",
+				"relative aspect-[4/3] w-full shrink-0 overflow-hidden border border-white/10 shadow-[0_20px_48px_rgba(0,0,0,0.32)] transition duration-500 group-hover:-translate-y-1 group-hover:shadow-[0_28px_60px_rgba(0,0,0,0.42)]",
 				visualToneClasses[tone],
 			)}
 		>
-			<div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.72),rgba(255,255,255,0.1)_48%,rgba(10,10,10,0.08))]" />
+			<div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(255,255,255,0.08)_48%,rgba(10,10,10,0.16))]" />
 			{hasImage ? (
-				<div className="absolute inset-3" style={imageStyle} />
+				<div className="absolute inset-[clamp(0.75rem,1.6vw,1.15rem)]" style={imageStyle} />
 			) : (
 				<div className="absolute inset-0 grid place-items-center px-4 text-center">
 					<span className="block max-w-full whitespace-nowrap pr-1 font-serif text-[clamp(1rem,1.6vw,1.55rem)] italic leading-none tracking-tight">
@@ -82,48 +85,147 @@ function CreditVisualTile({
 	);
 }
 
-export function CreditList({ title, items }: CreditListProps) {
+function ArrowIcon({ direction }: { direction: "next" | "previous" }) {
 	return (
-		<section className="py-12 border-b border-line last:border-0">
-			<div className="grid grid-cols-[0.4fr_1.6fr] gap-16 max-[920px]:grid-cols-1 max-[920px]:gap-8">
-				<div className="flex flex-col gap-4">
-					<span className={labelText}>Credits</span>
-					<h2 className="font-serif text-[clamp(2.5rem,4vw,3.5rem)] italic leading-[0.9] text-ink tracking-tight">
+		<svg
+			aria-hidden="true"
+			className={cn("h-5 w-5", direction === "previous" && "rotate-180")}
+			fill="none"
+			stroke="currentColor"
+			strokeLinecap="square"
+			strokeLinejoin="miter"
+			strokeWidth="1.5"
+			viewBox="0 0 24 24"
+		>
+			<path d="M4 12h15" />
+			<path d="m13 6 6 6-6 6" />
+		</svg>
+	);
+}
+
+function CarouselButton({
+	className,
+	direction,
+	onClick,
+	title,
+}: {
+	className?: string;
+	direction: "next" | "previous";
+	onClick: () => void;
+	title: string;
+}) {
+	const label =
+		direction === "previous"
+			? `Show previous ${title} credits`
+			: `Show next ${title} credits`;
+
+	return (
+		<button
+			aria-label={label}
+			className={cn(
+				"grid h-12 w-12 shrink-0 place-items-center border border-white/20 bg-white/[0.08] text-white backdrop-blur transition duration-300 hover:border-white/45 hover:bg-white/15 focus-visible:outline-[1px] focus-visible:outline-offset-4 focus-visible:outline-white",
+				className,
+			)}
+			onClick={onClick}
+			type="button"
+		>
+			<ArrowIcon direction={direction} />
+		</button>
+	);
+}
+
+export function CreditList({ title, items }: CreditListProps) {
+	const carouselRef = useRef<HTMLUListElement>(null);
+
+	const scrollCredits = (direction: -1 | 1) => {
+		const carousel = carouselRef.current;
+
+		if (!carousel) return;
+
+		carousel.scrollBy({
+			behavior: "smooth",
+			left: carousel.clientWidth * 0.82 * direction,
+		});
+	};
+
+	return (
+		<section className="border-b border-white/10 py-[clamp(3.5rem,8vw,6.5rem)] last:border-0">
+			<div className="mb-[clamp(2rem,5vw,4rem)] flex items-end justify-between gap-8 max-[820px]:items-start">
+				<div className="min-w-0">
+					<span className={cn(labelText, "text-accent")}>Credits</span>
+					<h2 className="mt-4 max-w-[760px] text-balance font-serif text-[clamp(3.15rem,8vw,7rem)] italic leading-[0.82] tracking-tight text-white">
 						{title}
 					</h2>
 				</div>
-				<ul className="flex flex-col gap-0 border-l border-line pl-16 max-[920px]:pl-0 max-[920px]:border-l-0">
-					{items.map((item) => (
+				<div className="hidden gap-3 max-[820px]:flex">
+					<CarouselButton
+						direction="previous"
+						onClick={() => scrollCredits(-1)}
+						title={title}
+					/>
+					<CarouselButton
+						direction="next"
+						onClick={() => scrollCredits(1)}
+						title={title}
+					/>
+				</div>
+			</div>
+
+			<div className="relative">
+				<CarouselButton
+					className="absolute left-0 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 max-[820px]:hidden"
+					direction="previous"
+					onClick={() => scrollCredits(-1)}
+					title={title}
+				/>
+				<ul
+					ref={carouselRef}
+					className="scrollbar-none flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-3 pr-8"
+				>
+					{items.map((item, index) => (
 						<li
 							key={`${item.project}-${item.role}`}
-							className="group grid grid-cols-[156px_minmax(0,1fr)_minmax(160px,auto)] items-center gap-7 border-b border-line py-5 transition-all duration-300 last:border-0 max-[720px]:grid-cols-[112px_minmax(0,1fr)] max-[720px]:gap-4"
+							className="snap-start"
 						>
-							<CreditVisualTile project={item.project} visual={item.visual} />
-							<div className="grid min-w-0 gap-2">
-								<strong className="text-[clamp(1.1rem,1.8vw,1.45rem)] font-light tracking-tight text-ink transition-all group-hover:italic">
-									{item.project}
-								</strong>
-								<div className="hidden h-px w-full border-b border-line border-dotted opacity-40 max-[720px]:block" />
-								<span
-									className={cn(
-										bodyText,
-										"hidden text-accent italic font-medium max-[720px]:block",
-									)}
-								>
-									{item.role}
-								</span>
-							</div>
-							<span
-								className={cn(
-									bodyText,
-									"text-right text-accent italic font-medium max-[720px]:hidden",
-								)}
-							>
-								{item.role}
-							</span>
+							<article className="group flex h-full w-[min(76vw,300px)] flex-col border border-white/12 bg-white/[0.045] p-4 transition duration-500 hover:-translate-y-2 hover:border-white/28 hover:bg-white/[0.075]">
+								<CreditVisualTile project={item.project} visual={item.visual} />
+								<div className="mt-6 grid flex-1 gap-6">
+									<div className="grid gap-3">
+										<span className="font-mono text-[0.58rem] uppercase tracking-[0.24em] text-white/36">
+											{String(index + 1).padStart(2, "0")}
+										</span>
+										<strong className="text-[clamp(1.45rem,2.2vw,2rem)] font-light leading-[0.98] tracking-tight text-white transition duration-300 group-hover:italic">
+											{item.project}
+										</strong>
+									</div>
+									<div className="mt-auto flex min-h-[64px] items-end justify-between gap-4 border-t border-white/12 pt-5">
+										<span
+											className={cn(
+												bodyText,
+												"text-[0.98rem] font-medium italic leading-snug text-white/72",
+											)}
+										>
+											{item.role}
+										</span>
+										<span className="grid h-8 w-8 shrink-0 place-items-center border border-white/18 font-mono text-[0.52rem] uppercase tracking-[0.14em] text-white/44">
+											VO
+										</span>
+									</div>
+								</div>
+							</article>
 						</li>
 					))}
 				</ul>
+				<CarouselButton
+					className="absolute right-0 top-1/2 z-10 translate-x-1/2 -translate-y-1/2 max-[820px]:hidden"
+					direction="next"
+					onClick={() => scrollCredits(1)}
+					title={title}
+				/>
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-ink to-transparent"
+				/>
 			</div>
 		</section>
 	);

@@ -144,3 +144,12 @@
 .custom-audio::-webkit-media-controls-panel {
 	background-color: #f9f9f9;
 }
+
+.scrollbar-none {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+	display: none;
+}
