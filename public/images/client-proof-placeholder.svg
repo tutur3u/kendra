@@ -1,0 +1,7 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" rx="28" fill="#F8FAF7"/>
+  <rect x="38" y="38" width="1204" height="644" rx="24" stroke="#1B1D1B" stroke-width="3"/>
+  <path d="M122 366C168 366 168 286 214 286C260 286 260 434 306 434C352 434 352 328 398 328C444 328 444 392 490 392C536 392 536 312 582 312C628 312 628 414 674 414C720 414 720 286 766 286C812 286 812 366 858 366C904 366 904 328 950 328C996 328 996 392 1042 392C1088 392 1088 312 1134 312" stroke="#7EB99E" stroke-width="14" stroke-linecap="round"/>
+  <text x="640" y="256" text-anchor="middle" fill="#1B1D1B" font-family="Georgia, serif" font-size="70" font-weight="700">Notable Client</text>
+  <text x="640" y="492" text-anchor="middle" fill="#496455" font-family="Arial, sans-serif" font-size="30" letter-spacing="7">LOGO PLACEHOLDER</text>
+</svg>

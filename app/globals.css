@@ -1,26 +1,146 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+	--color-background: #ffffff;
+	--color-foreground: #0a0a0a;
+	--color-ink: #0a0a0a;
+	--color-ink-soft: #404040;
+	--color-paper: #ffffff;
+	--color-surface: #f9f9f9;
+	--color-mist: #f2f2f2;
+	--color-line: #e5e5e5;
+	--color-accent: #c2410c; /* A sophisticated editorial orange/red */
+	--color-green: #2d4a3e;
+	--color-green-deep: #1a2e25;
+	--color-coral: #9f1239;
+	--color-sun: #ca8a04;
+	--color-charcoal: #0a0a0a;
+	--font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+	--font-serif: "Ibarra Real Nova", "Playfair Display", Georgia, serif;
+	--shadow-studio: 0 4px 20px rgba(0, 0, 0, 0.05);
+	--shadow-strong: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes header-drop {
+	from {
+		opacity: 0;
+		transform: translateY(-16px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes chip-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes draw-wave {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@keyframes grid-drift {
+	from {
+		background-position: 0 0;
+	}
+
+	to {
+		background-position: 48px 48px;
+	}
+}
+
+@keyframes ambient-disc {
+	from {
+		transform: translate3d(0, 0, 0) scale(0.96);
+	}
+
+	to {
+		transform: translate3d(-18px, -12px, 0) scale(1.04);
+	}
+}
+
+@keyframes slow-spin {
+	to {
+		transform: rotate(1turn);
+	}
+}
+
+@keyframes view-rise {
+	from {
+		opacity: 0;
+		transform: translateY(44px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes logo-pop {
+	from {
+		opacity: 0;
+		transform: translateY(18px) scale(0.96);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes pulse-bar {
+	from {
+		opacity: 0.48;
+		transform: scaleY(0.75);
+	}
+
+	to {
+		opacity: 1;
+		transform: scaleY(1);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+/* Custom Audio Player Styles */
+.custom-audio::-webkit-media-controls-enclosure {
+	background-color: transparent;
+	border-radius: 0;
+}
+.custom-audio::-webkit-media-controls-panel {
+	background-color: #f9f9f9;
 }
