@@ -74,7 +74,7 @@ export function SiteHeader() {
 								{site.name}
 							</strong>
 							<span className="mt-1 block text-[0.5rem] md:text-[0.6rem] font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-accent">
-								Portfolio
+								Voice Actor
 							</span>
 						</div>
 					</Link>
