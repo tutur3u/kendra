@@ -21,16 +21,16 @@ export const navigation = [
 
 export const bio = [
 	"Hello! I'm Kendra Braun. I've been voice acting since I was in high school, and my passion has only grown. During my attendance at university, I booked several ADR and video game roles. After graduating post secondary, I moved to Japan for several years and booked my first international voice acting gig there.",
-	"I'm now back in Alberta, Canada and ready to pursue my North American career. I have recorded commercials, animation, dubs, video games, narration, and more from my fully-equipped Source-Connect Standard home studio.",
+	"I'm now back in Alberta, Canada and ready to pursue my North American career. I have recorded commercials, animation, ADR, video games, narration, and more from my Source-Connect Standard equipped home studio.",
 ];
 
 export const performanceModes = [
 	"Commercials",
 	"Animation",
-	"Dubs",
+	"ADR",
 	"Video games",
 	"Narration",
-	"Remote home-studio sessions",
+	"Sound-treated home studio sessions",
 ];
 
 export const demos = [
@@ -241,7 +241,7 @@ export const studioSpecs = [
 	},
 	{
 		label: "Interface",
-		value: "Scarlett Mini",
+		value: "Audient EVO4",
 	},
 	{
 		label: "DAW",

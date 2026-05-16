@@ -23,7 +23,7 @@ export default function HomeStudioPage() {
 		<main className="bg-white">
 			<PageHero
 				title="Home Studio"
-				description="A compact, sound-treated home studio for remote VO sessions, live direction, and Source-Connect workflows."
+				description="A compact, sound-treated home studio for remote VO sessions, live direction, and Source-Connect Standard workflows."
 			>
 				<motion.span 
 					className="text-[1.2rem] font-bold italic tracking-tight text-ink"
@@ -31,7 +31,7 @@ export default function HomeStudioPage() {
 					initial="initial"
 					animate="animate"
 				>
-					Source-Connect Standard
+					Source-Connect Standard certified
 				</motion.span>
 			</PageHero>
 

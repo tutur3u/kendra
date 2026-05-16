@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 		template: `%s | ${site.name}`,
 	},
 	description:
-		"Remote and international voice actor Kendra Braun for commercials, animation, dubs, video games, narration, and Source-Connect home studio sessions.",
+		"Remote and international voice actor Kendra Braun for commercials, animation, ADR, video games, narration, and Source-Connect Standard equipped home studio sessions.",
 	openGraph: {
 		title: site.title,
 		description: "Remote & International Voice Actor based in Alberta, Canada.",

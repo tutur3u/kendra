@@ -30,9 +30,37 @@ const sectionGrid = cn(
 	"grid grid-cols-[minmax(240px,0.4fr)_minmax(0,1.6fr)] gap-[clamp(2rem,8vw,6rem)] py-[clamp(80px,12vw,160px)] max-[920px]:grid-cols-1",
 );
 
-const heroSpecs = [
-	{ label: "Studio", value: "Source-Connect Standard" },
-	{ label: "Mic", value: "Neumann TLM 103" },
+type HeroSpec = {
+	label: string;
+	value: string;
+	badge?: {
+		alt: string;
+		height: number;
+		src: string;
+		width: number;
+	};
+	details?: { label: string; value: string }[];
+};
+
+const heroSpecs: HeroSpec[] = [
+	{
+		label: "Certified",
+		value: "Source-Connect Standard",
+		badge: {
+			alt: "Source-Connect Standard badge",
+			height: 81,
+			src: "/images/source-connect-standard-badge.svg",
+			width: 100,
+		},
+	},
+	{
+		label: "Mic",
+		value: "Neumann TLM 103",
+		details: [
+			{ label: "Interface", value: "Audient EVO4" },
+			{ label: "DAW", value: "Adobe Audition" },
+		],
+	},
 	{ label: "Base", value: "Alberta, Canada" },
 ];
 
@@ -76,8 +104,9 @@ export default function Home() {
 								{site.tagline}
 							</motion.p>
 							<motion.p variants={fadeInUp} className={cn(bodyText, "max-w-[480px]")}>
-								A flexible voice for commercials, animation, dubs, video games,
-								narration, and remote sessions from a Source-Connect home studio.
+								A flexible voice for commercials, animation, ADR, video games,
+								narration, and remote sessions from a Source-Connect Standard
+								equipped home studio.
 							</motion.p>
 							<motion.div variants={fadeInUp} className="mt-8 flex flex-wrap gap-4 max-[480px]:flex-col">
 								<Link
@@ -144,6 +173,25 @@ export default function Home() {
 						<div key={spec.label} className="grid gap-1">
 							<span className={labelText}>{spec.label}</span>
 							<span className="text-sm font-medium text-ink">{spec.value}</span>
+							{spec.badge ? (
+								<Image
+									src={spec.badge.src}
+									alt={spec.badge.alt}
+									width={spec.badge.width}
+									height={spec.badge.height}
+									className="mt-2 h-auto w-[100px]"
+								/>
+							) : null}
+							{spec.details ? (
+								<div className="mt-3 grid gap-3">
+									{spec.details.map((detail) => (
+										<div key={detail.label} className="grid gap-1">
+											<span className={labelText}>{detail.label}</span>
+											<span className="text-sm font-medium text-ink">{detail.value}</span>
+										</div>
+									))}
+								</div>
+							) : null}
 						</div>
 					))}
 				</motion.div>
@@ -248,6 +296,18 @@ export default function Home() {
 						<p className={cn(bodyText, "max-w-[440px]")}>
 							Broadcast remotely or book Alberta-based studio work with a professional recording setup.
 						</p>
+						<div className="flex flex-wrap items-center gap-4">
+							<Image
+								src="/images/source-connect-standard-badge.svg"
+								alt="Source-Connect Standard badge"
+								width={130}
+								height={105}
+								className="h-auto w-[130px]"
+							/>
+							<p className="max-w-[230px] text-sm font-medium leading-relaxed text-ink-soft">
+								Source-Connect Standard equipped for certified remote sessions.
+							</p>
+						</div>
 						<Link
 							href="/home-studio"
 							className={cn(pillButton, "w-fit")}
@@ -262,7 +322,7 @@ export default function Home() {
 						viewport={{ once: true, margin: "-100px" }}
 						transition={{ duration: 0.8, delay: 0.2 }}
 					>
-						{studioSpecs.slice(0, 4).map((spec) => (
+						{studioSpecs.slice(0, 5).map((spec) => (
 							<div key={spec.label} className="grid gap-2">
 								<dt className={labelText}>{spec.label}</dt>
 								<dd className="text-lg font-light tracking-tight text-ink">{spec.value}</dd>
