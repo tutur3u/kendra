@@ -14,6 +14,7 @@ export const site = {
 
 export const navigation = [
 	{ href: "/", label: "Home" },
+	{ href: "/voice-over", label: "Voice Over" },
 	{ href: "/experience", label: "Experience" },
 	{ href: "/home-studio", label: "Home Studio" },
 	{ href: "/contact", label: "Contact" },

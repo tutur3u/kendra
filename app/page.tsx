@@ -107,16 +107,22 @@ export default function Home() {
 							</motion.p>
 							<motion.div variants={fadeInUp} className="mt-8 flex flex-wrap gap-4 max-[480px]:flex-col">
 								<Link
-									href="#demos"
+									href="/voice-over#reels"
 									className={cn(pillButton, "bg-ink text-white max-[480px]:w-full")}
 								>
-									Listen to reels
+									Voice-over reels
 								</Link>
 								<Link
 									href="/contact"
 									className={cn(pillButton, "bg-transparent text-ink max-[480px]:w-full")}
 								>
 									Book a session
+								</Link>
+								<Link
+									href="#demos"
+									className="inline-flex min-h-11 items-center text-[0.85rem] font-bold uppercase tracking-[0.1em] text-accent underline decoration-accent/30 underline-offset-8 transition hover:text-ink max-[480px]:justify-center"
+								>
+									Quick listen
 								</Link>
 							</motion.div>
 						</div>

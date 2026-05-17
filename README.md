@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kendra Braun
 
-## Getting Started
+Next 16 app for Kendra Braun's voice acting portfolio, reels, studio specs, and booking flow.
 
-First, run the development server:
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tuturuuu CMS
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The public site can render from Tuturuuu CMS delivery and falls back to the static content in `app/content.ts` when CMS delivery is unavailable or not configured.
 
-## Learn More
+Required admin/sync environment:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+TUTURUUU_API_BASE_URL=https://tuturuuu.com/api/v1
+TUTURUUU_KENDRA_WORKSPACE_ID=...
+KENDRA_APP_ID=kendra
+KENDRA_APP_SECRET=...
+KENDRA_SESSION_SECRET=...
+KENDRA_APP_URL=https://...
+TUTURUUU_WEB_APP_URL=https://tuturuuu.com
+TUTURUUU_CMS_APP_URL=https://cms.tuturuuu.com
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Local development can use the platform defaults when `DEV_MODE=true`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+TUTURUUU_API_BASE_URL=http://localhost:7803/api/v1
+TUTURUUU_WEB_APP_URL=http://localhost:7803
+TUTURUUU_CMS_APP_URL=http://localhost:7811
+```
 
-## Deploy on Vercel
+Admin entrypoints:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `/admin/login`: centralized Tuturuuu login.
+- `/verify-token`: receives the app token and stores the encrypted Kendra admin session.
+- `/admin`: sync dashboard for the local external-project manifest.
+- `/voice-over`: audio-first public route backed by CMS delivery.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The local manifest lives in `lib/kendra-external-project-manifest.ts` and seeds the interactive reel from `public/audios/kendra-braun-interactive.mp3`.
+
+## Verification
+
+```bash
+bun test lib/kendra-content.test.ts lib/kendra-external-project-manifest.test.ts app/api/auth/verify-app-token/route.test.ts
+bun run lint
+bun run build
+```

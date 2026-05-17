@@ -5,10 +5,12 @@ import { SiteFooter } from "./components/site-footer";
 import { SiteHeader } from "./components/site-header";
 import { SmoothScroll } from "./components/smooth-scroll";
 import { site } from "./content";
+import { getKendraAppBaseUrl } from "@/lib/kendra-config";
 
 const bodyClassName = "relative isolate min-h-full overflow-x-hidden bg-white font-sans text-ink selection:bg-accent selection:text-white";
 
 export const metadata: Metadata = {
+	metadataBase: new URL(getKendraAppBaseUrl()),
 	title: {
 		default: site.title,
 		template: `%s | ${site.name}`,
