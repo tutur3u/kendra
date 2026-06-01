@@ -9,6 +9,9 @@ import {
 	getKendraWorkspaceId,
 	resolveKendraAdminTargetKey,
 } from "@/lib/kendra-config";
+import { kendraExternalProjectManifest } from "@/lib/kendra-external-project-manifest";
+import { getKendraPublicManifestAssetPlan } from "@/lib/kendra-public-asset-sync";
+import type { ExternalProjectsClient } from "tuturuuu/external-projects";
 import {
 	getKendraAdminSession,
 	getKendraAdminStudio,
@@ -16,6 +19,8 @@ import {
 } from "@/lib/kendra-admin-api";
 
 export const dynamic = "force-dynamic";
+
+type SdkManifest = Parameters<ExternalProjectsClient["applySyncManifest"]>[1];
 
 export const metadata: Metadata = {
 	title: "Admin",
@@ -52,6 +57,7 @@ export default async function AdminPage({
 	return (
 		<KendraAdminClient
 			adminLinks={buildKendraAdminLinks(workspaceId)}
+			publicAssets={getKendraPublicManifestAssetPlan(kendraExternalProjectManifest as unknown as SdkManifest)}
 			cmsBaseUrl={getKendraCmsBaseUrl()}
 			initialStudio={studio}
 			initialTarget={targetKey}

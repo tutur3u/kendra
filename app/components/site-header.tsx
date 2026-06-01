@@ -102,6 +102,18 @@ export function SiteHeader() {
 								</Link>
 							);
 						})}
+						<Link
+							href="/admin"
+							className={cn(
+								"rounded-full border px-4 py-2 text-[0.68rem] font-bold uppercase tracking-[0.18em] transition duration-300",
+								pathname.startsWith("/admin")
+									? "border-accent bg-accent text-white"
+									: "border-line text-ink-soft hover:border-accent hover:text-accent",
+							)}
+							aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+						>
+							Admin
+						</Link>
 					</nav>
 
 					{/* Mobile Menu Toggle */}
@@ -146,6 +158,21 @@ export function SiteHeader() {
 							</Link>
 						);
 					})}
+					<Link
+						href="/admin"
+						className={cn(
+							"rounded-full border px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] transition-all duration-300",
+							pathname.startsWith("/admin")
+								? "border-accent bg-accent text-white"
+								: "border-line text-ink",
+							isMenuOpen ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+						)}
+						style={{ transitionDelay: `${navigation.length * 100}ms` }}
+						onClick={() => setIsMenuOpen(false)}
+						aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+					>
+						Admin
+					</Link>
 					<div 
 						className={cn(
 							"mt-12 flex flex-col items-center gap-4 transition-all duration-500 delay-300",

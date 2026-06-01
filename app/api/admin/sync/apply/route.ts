@@ -3,9 +3,9 @@ import {
 	getKendraAdminSession,
 	revalidateKendraContent,
 } from "@/lib/kendra-admin-api";
-import { getKendraWorkspaceId } from "@/lib/kendra-config";
+import { getKendraAppBaseUrl, getKendraWorkspaceId } from "@/lib/kendra-config";
 import { kendraExternalProjectManifest } from "@/lib/kendra-external-project-manifest";
-import { uploadExternalProjectPublicFolderAssets } from "tuturuuu/external-projects/public-assets";
+import { uploadKendraPublicManifestAssets } from "@/lib/kendra-public-asset-sync";
 import type { ExternalProjectsClient } from "tuturuuu/external-projects";
 import { NextResponse } from "next/server";
 
@@ -29,21 +29,23 @@ export async function POST(request: Request) {
 		const workspaceId = getKendraWorkspaceId();
 		const client = createKendraExternalProjectsClient(session.accessToken);
 		const manifest = kendraExternalProjectManifest as unknown as SdkManifest;
+		const appBaseUrl = getKendraAppBaseUrl(new URL(request.url).origin);
 
 		await client.setupExternalProjectStudio(workspaceId, {
 			manifest,
 		});
 
-		const publicAssetSync = await uploadExternalProjectPublicFolderAssets(
+		const publicAssetSync = await uploadKendraPublicManifestAssets(
 			client,
 			workspaceId,
 			manifest,
+			{ appBaseUrl },
 		);
 
 		if (publicAssetSync.skipped.length > 0) {
 			return NextResponse.json(
 				{
-					error: "Missing local public assets. Upload aborted before applying the manifest.",
+					error: "Missing public assets. Upload aborted before applying the manifest.",
 					publicAssetSync: {
 						skipped: publicAssetSync.skipped,
 						uploaded: publicAssetSync.uploaded,
