@@ -57,7 +57,9 @@ export default async function AdminPage({
 	return (
 		<KendraAdminClient
 			adminLinks={buildKendraAdminLinks(workspaceId)}
-			publicAssets={getKendraPublicManifestAssetPlan(kendraExternalProjectManifest as unknown as SdkManifest)}
+			publicAssets={await getKendraPublicManifestAssetPlan(
+				kendraExternalProjectManifest as unknown as SdkManifest,
+			)}
 			cmsBaseUrl={getKendraCmsBaseUrl()}
 			initialStudio={studio}
 			initialTarget={targetKey}

@@ -41,6 +41,23 @@ function statusClass(status: "missing" | "pending" | "uploaded") {
 	return "border-line bg-surface text-ink-soft";
 }
 
+function formatBytes(bytes: number) {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function metadataSummary(asset: KendraPublicAssetPlanItem) {
+	if (!asset.metadata) return "Not observed locally";
+
+	const dimensions =
+		asset.metadata.width && asset.metadata.height
+			? `, ${asset.metadata.width}x${asset.metadata.height}`
+			: "";
+
+	return `${asset.metadata.contentType}, ${formatBytes(asset.metadata.bytes)}${dimensions}`;
+}
+
 export function JsonDetails({ state }: { state: SyncState }) {
 	if (state.kind === "idle") {
 		return (
@@ -105,6 +122,7 @@ export function AssetReadinessTable({
 							<th className="px-5 py-3 font-bold">File</th>
 							<th className="px-5 py-3 font-bold">CMS location</th>
 							<th className="px-5 py-3 font-bold">Public path</th>
+							<th className="px-5 py-3 font-bold">Observed metadata</th>
 							<th className="px-5 py-3 font-bold">Status</th>
 						</tr>
 					</thead>
@@ -123,6 +141,9 @@ export function AssetReadinessTable({
 									</td>
 									<td className="px-5 py-4">
 										<code className="break-all rounded-md bg-surface px-2 py-1 text-xs text-ink">{asset.publicPath}</code>
+									</td>
+									<td className="px-5 py-4 text-ink-soft">
+										<div className="max-w-[220px] break-words text-xs">{metadataSummary(asset)}</div>
 									</td>
 									<td className="px-5 py-4">
 										<span

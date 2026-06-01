@@ -16,6 +16,7 @@ export type KendraPublicAssetPlanItem = {
 	collectionSlug: string;
 	entrySlug: string;
 	filename: string;
+	metadata: KendraObservedPublicAssetMetadata | null;
 	publicPath: string;
 	stableSourceId: string | null;
 	storagePath: string;
@@ -34,6 +35,7 @@ type PublicAssetSource = {
 	bytes: number;
 	contentType: string;
 	detail: string;
+	metadata: KendraObservedPublicAssetMetadata;
 	source: "local" | "public-url";
 	value: Uint8Array;
 };
@@ -42,6 +44,15 @@ export type KendraPublicAssetUpload = PublicAssetUploadDescriptor & {
 	bytes: number;
 	contentType: string;
 	source: "local" | "public-url";
+};
+
+export type KendraObservedPublicAssetMetadata = {
+	bytes: number;
+	contentType: string;
+	filename: string;
+	height?: number;
+	publicPath: string;
+	width?: number;
 };
 
 export type KendraPublicAssetSkipped = PublicAssetUploadDescriptor & {
@@ -92,6 +103,57 @@ function readErrorMessage(error: unknown) {
 	return error instanceof Error ? error.message : String(error);
 }
 
+function pngDimensions(bytes: Uint8Array) {
+	if (
+		bytes.length < 24 ||
+		bytes[0] !== 0x89 ||
+		bytes[1] !== 0x50 ||
+		bytes[2] !== 0x4e ||
+		bytes[3] !== 0x47
+	) {
+		return null;
+	}
+
+	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+	return {
+		height: view.getUint32(20),
+		width: view.getUint32(16),
+	};
+}
+
+function imageDimensions(bytes: Uint8Array, contentType: string) {
+	if (contentType === "image/png") {
+		return pngDimensions(bytes);
+	}
+
+	return null;
+}
+
+function observedMetadata({
+	bytes,
+	contentType,
+	filename,
+	publicPath,
+	value,
+}: {
+	bytes: number;
+	contentType: string;
+	filename: string;
+	publicPath: string;
+	value: Uint8Array;
+}): KendraObservedPublicAssetMetadata {
+	const dimensions = imageDimensions(value, contentType);
+
+	return {
+		bytes,
+		contentType,
+		filename,
+		publicPath,
+		...(dimensions ?? {}),
+	};
+}
+
 function getUploadDescriptor({
 	asset,
 	entry,
@@ -104,6 +166,12 @@ function getUploadDescriptor({
 		collectionSlug: entry.collectionSlug,
 		entrySlug: entry.slug,
 		filename: getExternalProjectPublicAssetFilename(publicPath),
+		metadata:
+			asset.metadata &&
+			typeof asset.metadata === "object" &&
+			"observedPublicAsset" in asset.metadata
+				? (asset.metadata.observedPublicAsset as KendraObservedPublicAssetMetadata)
+				: null,
 		publicPath,
 		stableSourceId: asset.stableSourceId ?? null,
 		storagePath:
@@ -126,14 +194,46 @@ async function readLocalPublicAsset({
 }) {
 	const filePath = resolvePublicFilePath(publicDir, descriptor.publicPath);
 	const file = await readFile(filePath);
+	const value = new Uint8Array(file);
+	const bytes = value.byteLength;
+	const contentType = contentTypeForPath(descriptor.publicPath);
 
 	return {
-		bytes: file.byteLength,
-		contentType: contentTypeForPath(descriptor.publicPath),
+		bytes,
+		contentType,
 		detail: filePath,
+		metadata: observedMetadata({
+			bytes,
+			contentType,
+			filename: descriptor.filename,
+			publicPath: descriptor.publicPath,
+			value,
+		}),
 		source: "local" as const,
-		value: new Uint8Array(file),
+		value,
 	};
+}
+
+async function observeLocalPublicAssetMetadata({
+	descriptor,
+	publicDir,
+}: {
+	descriptor: PublicAssetUploadDescriptor;
+	publicDir: string;
+}) {
+	const filePath = resolvePublicFilePath(publicDir, descriptor.publicPath);
+	const file = await readFile(filePath);
+	const value = new Uint8Array(file);
+	const bytes = value.byteLength;
+	const contentType = contentTypeForPath(descriptor.publicPath);
+
+	return observedMetadata({
+		bytes,
+		contentType,
+		filename: descriptor.filename,
+		publicPath: descriptor.publicPath,
+		value,
+	});
 }
 
 async function fetchPublicAsset({
@@ -154,13 +254,38 @@ async function fetchPublicAsset({
 
 	const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || contentTypeForPath(descriptor.publicPath);
 	const buffer = await response.arrayBuffer();
+	const value = new Uint8Array(buffer);
+	const bytes = value.byteLength;
 
 	return {
-		bytes: buffer.byteLength,
+		bytes,
 		contentType,
 		detail: assetUrl,
+		metadata: observedMetadata({
+			bytes,
+			contentType,
+			filename: descriptor.filename,
+			publicPath: descriptor.publicPath,
+			value,
+		}),
 		source: "public-url" as const,
-		value: new Uint8Array(buffer),
+		value,
+	};
+}
+
+function toArrayBuffer(bytes: Uint8Array) {
+	const buffer = new ArrayBuffer(bytes.byteLength);
+	new Uint8Array(buffer).set(bytes);
+	return buffer;
+}
+
+function attachObservedMetadata(
+	asset: ReturnType<typeof getExternalProjectPublicAssetUploads>[number]["asset"],
+	source: PublicAssetSource,
+) {
+	asset.metadata = {
+		...(asset.metadata ?? {}),
+		observedPublicAsset: source.metadata,
 	};
 }
 
@@ -185,7 +310,7 @@ async function uploadAsset({
 		filename: descriptor.filename,
 		upsert,
 	});
-	const body = new Blob([source.value], { type: source.contentType });
+	const body = toArrayBuffer(source.value);
 	let uploadResponse = await fetchImpl(uploadUrl.signedUrl, {
 		body,
 		cache: "no-store",
@@ -275,6 +400,7 @@ export async function uploadKendraPublicManifestAssets(
 			continue;
 		}
 
+		attachObservedMetadata(upload.asset, source);
 		await uploadAsset({
 			client,
 			descriptor,
@@ -287,6 +413,7 @@ export async function uploadKendraPublicManifestAssets(
 			...descriptor,
 			bytes: source.bytes,
 			contentType: source.contentType,
+			metadata: source.metadata,
 			source: source.source,
 		});
 	}
@@ -294,10 +421,22 @@ export async function uploadKendraPublicManifestAssets(
 	return { manifest, skipped, uploaded };
 }
 
-export function getKendraPublicManifestAssetPlan(manifestInput: SyncManifest) {
+export async function getKendraPublicManifestAssetPlan(
+	manifestInput: SyncManifest,
+	options: { publicDir?: string } = {},
+) {
 	const manifest = linkExternalProjectPublicFolderAssets(manifestInput) as SyncManifest;
+	const publicDir = options.publicDir ?? resolve(process.cwd(), "public");
+	const plan: KendraPublicAssetPlanItem[] = [];
 
-	return getExternalProjectPublicAssetUploads(manifest).map((upload) =>
-		getUploadDescriptor({ ...upload, manifest }),
-	);
+	for (const upload of getExternalProjectPublicAssetUploads(manifest)) {
+		const descriptor = getUploadDescriptor({ ...upload, manifest });
+
+		plan.push({
+			...descriptor,
+			metadata: await observeLocalPublicAssetMetadata({ descriptor, publicDir }).catch(() => descriptor.metadata),
+		});
+	}
+
+	return plan;
 }

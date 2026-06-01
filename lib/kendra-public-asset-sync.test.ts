@@ -2,11 +2,18 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { uploadKendraPublicManifestAssets } from "./kendra-public-asset-sync";
+import {
+	getKendraPublicManifestAssetPlan,
+	uploadKendraPublicManifestAssets,
+} from "./kendra-public-asset-sync";
 
 type Manifest = Parameters<typeof uploadKendraPublicManifestAssets>[2];
 
 const tempDirs: string[] = [];
+const onePixelPng = new Uint8Array([
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+]);
 
 function manifestFor(publicPath: string): Manifest {
 	return {
@@ -73,9 +80,33 @@ afterEach(async () => {
 });
 
 describe("uploadKendraPublicManifestAssets", () => {
+	test("builds asset plan metadata from local public files", async () => {
+		const publicDir = await createPublicDir();
+		await writeFile(join(publicDir, "featured.png"), onePixelPng);
+
+		const plan = await getKendraPublicManifestAssetPlan(manifestFor("/featured.png"), {
+			publicDir,
+		});
+
+		expect(plan).toMatchObject([
+			{
+				filename: "featured.png",
+				metadata: {
+					bytes: onePixelPng.byteLength,
+					contentType: "image/png",
+					filename: "featured.png",
+					height: 1,
+					publicPath: "/featured.png",
+					width: 1,
+				},
+				publicPath: "/featured.png",
+			},
+		]);
+	});
+
 	test("uploads a manifest asset from local public files", async () => {
 		const publicDir = await createPublicDir();
-		await writeFile(join(publicDir, "featured.png"), new Uint8Array([1, 2, 3]));
+		await writeFile(join(publicDir, "featured.png"), onePixelPng);
 		const { calls, client } = createClient();
 		const uploads: RequestInit[] = [];
 
@@ -104,8 +135,12 @@ describe("uploadKendraPublicManifestAssets", () => {
 		expect(result.skipped).toEqual([]);
 		expect(result.uploaded).toMatchObject([
 			{
-				bytes: 3,
+				bytes: onePixelPng.byteLength,
 				contentType: "image/png",
+				metadata: {
+					height: 1,
+					width: 1,
+				},
 				publicPath: "/featured.png",
 				source: "local",
 				storagePath: "external-projects/kendra/profile/profile/featured.png",
@@ -114,6 +149,17 @@ describe("uploadKendraPublicManifestAssets", () => {
 		expect(result.manifest.content.entries[0]?.assets?.[0]?.storagePath).toBe(
 			"external-projects/kendra/profile/profile/featured.png",
 		);
+		expect(result.manifest.content.entries[0]?.assets?.[0]?.metadata).toMatchObject({
+			observedPublicAsset: {
+				bytes: onePixelPng.byteLength,
+				contentType: "image/png",
+				filename: "featured.png",
+				height: 1,
+				publicPath: "/featured.png",
+				width: 1,
+			},
+			publicPath: "/featured.png",
+		});
 		expect(uploads[0]?.headers).toMatchObject({
 			Authorization: "Bearer upload-token",
 			"Content-Type": "image/png",
