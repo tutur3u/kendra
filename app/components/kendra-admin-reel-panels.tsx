@@ -50,9 +50,9 @@ export function ReelList({
 		<aside className="grid content-start gap-3">
 			<div className="flex items-center justify-between gap-3">
 				<div>
-					<span className={labelText}>Library</span>
+					<span className={labelText}>Audio library</span>
 					<h2 className="mt-2 font-serif text-4xl font-normal italic leading-none text-ink">
-						Voice reels
+						Audio reels
 					</h2>
 				</div>
 				<button
@@ -120,67 +120,5 @@ export function ReelList({
 				</div>
 			)}
 		</aside>
-	);
-}
-
-export function AudioTab({
-	onSelect,
-	reels,
-}: {
-	onSelect: (id: string) => void;
-	reels: KendraAdminReel[];
-}) {
-	return (
-		<section className="grid gap-5">
-			<div className="grid gap-3 sm:grid-cols-3">
-				<StatTile label="Ready" value={reels.filter((reel) => reel.audioUrl).length} />
-				<StatTile label="Missing" value={reels.filter((reel) => !reel.audioUrl).length} />
-				<StatTile label="Published" value={countByStatus(reels, "published")} />
-			</div>
-
-			<div className="overflow-x-auto border border-line bg-white">
-				<table className="w-full min-w-[760px] border-collapse text-left text-sm">
-					<thead className="border-b border-line bg-surface text-xs font-bold uppercase tracking-[0.14em] text-ink-soft">
-						<tr>
-							<th className="px-4 py-3">Reel</th>
-							<th className="px-4 py-3">File</th>
-							<th className="px-4 py-3">Duration</th>
-							<th className="px-4 py-3">Status</th>
-							<th className="px-4 py-3">Action</th>
-						</tr>
-					</thead>
-					<tbody>
-						{reels.map((reel) => (
-							<tr className="border-b border-line last:border-b-0" key={reel.id}>
-								<td className="px-4 py-3 font-semibold text-ink">{reel.title}</td>
-								<td className="px-4 py-3 text-ink-soft">
-									{reel.audioFileName ?? reel.audioStoragePath ?? "Missing"}
-								</td>
-								<td className="px-4 py-3 text-ink-soft">{reel.duration ?? "-"}</td>
-								<td className="px-4 py-3">
-									<span
-										className={cn(
-											"border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em]",
-											statusClass(reel.status),
-										)}
-									>
-										{formatStatus(reel.status)}
-									</span>
-								</td>
-								<td className="px-4 py-3">
-									<button
-										className="font-bold text-accent text-xs uppercase tracking-[0.12em] underline decoration-accent/25 underline-offset-4"
-										onClick={() => onSelect(reel.id)}
-										type="button"
-									>
-										Edit audio
-									</button>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-		</section>
 	);
 }

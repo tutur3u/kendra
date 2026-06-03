@@ -4,21 +4,16 @@ import { useState } from "react";
 import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
 import { KendraAdminReelForm } from "./kendra-admin-reel-form";
 import {
-	AudioTab,
 	countByStatus,
-	formatStatus,
 	ReelList,
-	statusClass,
 	StatTile,
 } from "./kendra-admin-reel-panels";
 import { cn, labelText, shell } from "./ui";
 
-type AdminTab = "reels" | "audio" | "publish" | "account";
+type AdminTab = "audio" | "account";
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
-	{ id: "reels", label: "Reels" },
 	{ id: "audio", label: "Audio" },
-	{ id: "publish", label: "Publish" },
 	{ id: "account", label: "Account" },
 ];
 
@@ -38,51 +33,17 @@ export function KendraAdminClient({
 	initialReels: KendraAdminReel[];
 	userEmail: string | null;
 }) {
-	const [activeTab, setActiveTab] = useState<AdminTab>("reels");
+	const [activeTab, setActiveTab] = useState<AdminTab>("audio");
 	const [accountOpen, setAccountOpen] = useState(false);
 	const [reels, setReels] = useState(initialReels);
 	const [selectedId, setSelectedId] = useState<string | null>(
 		initialReels[0]?.id ?? null,
 	);
-	const [publishMessage, setPublishMessage] = useState<string | null>(null);
-	const [refreshing, setRefreshing] = useState(false);
 	const selectedReel = selectedId
 		? reels.find((reel) => reel.id === selectedId) ?? null
 		: null;
 	const publishedCount = countByStatus(reels, "published");
 	const readyAudioFiles = reels.filter((reel) => reel.audioUrl).length;
-
-	const selectReel = (id: string) => {
-		setSelectedId(id);
-		setActiveTab("reels");
-	};
-
-	const refreshPublicPages = async () => {
-		setRefreshing(true);
-		setPublishMessage(null);
-
-		try {
-			const response = await fetch("/api/admin/reels/refresh", { method: "POST" });
-			const payload = (await response.json().catch(() => ({}))) as {
-				error?: string;
-				reels?: KendraAdminReel[];
-			};
-
-			if (!response.ok) {
-				setPublishMessage(payload.error ?? "We could not refresh the public pages.");
-				return;
-			}
-
-			setReels(payload.reels ?? []);
-			setPublishMessage("Public reel pages refreshed.");
-		} catch (error) {
-			setPublishMessage(
-				error instanceof Error ? error.message : "We could not refresh the public pages.",
-			);
-		} finally {
-			setRefreshing(false);
-		}
-	};
 
 	return (
 		<main className="min-h-screen bg-surface">
@@ -94,7 +55,7 @@ export function KendraAdminClient({
 							Audio reels, edited in one place.
 						</h1>
 						<p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-soft md:text-lg">
-							Create reels, replace audio, publish public entries, and remove outdated demos from a focused workspace.
+							Create reels, replace audio files, manage public status, and remove outdated demos from a focused workspace.
 						</p>
 					</div>
 
@@ -144,7 +105,7 @@ export function KendraAdminClient({
 				</header>
 
 				<div className="grid gap-3 sm:grid-cols-3">
-					<StatTile label="Total reels" value={reels.length} />
+					<StatTile label="Audio reels" value={reels.length} />
 					<StatTile label="Published" value={publishedCount} />
 					<StatTile label="Audio ready" value={readyAudioFiles} />
 				</div>
@@ -167,11 +128,11 @@ export function KendraAdminClient({
 					))}
 				</nav>
 
-				{activeTab === "reels" ? (
+				{activeTab === "audio" ? (
 					<section className="grid gap-6 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]">
 						<ReelList
 							onNew={() => setSelectedId(null)}
-							onSelect={setSelectedId}
+							onSelect={(id) => setSelectedId(id)}
 							reels={reels}
 							selectedId={selectedId}
 						/>
@@ -188,69 +149,6 @@ export function KendraAdminClient({
 								}}
 								reel={selectedReel}
 							/>
-						</div>
-					</section>
-				) : null}
-
-				{activeTab === "audio" ? <AudioTab onSelect={selectReel} reels={reels} /> : null}
-
-				{activeTab === "publish" ? (
-					<section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-						<div className="border border-line bg-white p-5">
-							<span className={labelText}>Public status</span>
-							<h2 className="mt-3 font-serif text-4xl font-normal italic leading-none text-ink">
-								{publishedCount} live reel{publishedCount === 1 ? "" : "s"}
-							</h2>
-							<p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">
-								Published reels with audio are available on the website after refresh.
-							</p>
-							<div className="mt-6 grid gap-3 sm:grid-cols-2">
-								<button
-									className="min-h-12 border border-ink bg-ink px-6 text-sm font-bold uppercase tracking-[0.12em] text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-									disabled={refreshing}
-									onClick={() => void refreshPublicPages()}
-									type="button"
-								>
-									{refreshing ? "Refreshing" : "Refresh website"}
-								</button>
-								<a
-									className="inline-flex min-h-12 items-center justify-center border border-line bg-white px-6 text-sm font-bold uppercase tracking-[0.12em] text-ink transition hover:border-accent hover:text-accent"
-									href="/voice-over#reels"
-								>
-									View reels
-								</a>
-							</div>
-							{publishMessage ? (
-								<div className="mt-5 border border-line bg-surface px-4 py-3 text-sm text-ink-soft">
-									{publishMessage}
-								</div>
-							) : null}
-						</div>
-
-						<div className="grid gap-3 border border-line bg-white p-5">
-							<span className={labelText}>Publish checks</span>
-							{reels.map((reel) => (
-								<div
-									className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
-									key={reel.id}
-								>
-									<div>
-										<strong className="text-sm text-ink">{reel.title}</strong>
-										<div className="mt-1 text-ink-soft text-xs">
-											{reel.audioUrl ? "Audio ready" : "Audio missing"}
-											{" / "}
-											{formatStatus(reel.status)}
-										</div>
-									</div>
-									<button
-										className="self-start font-bold text-accent text-xs uppercase tracking-[0.12em] underline decoration-accent/25 underline-offset-4 sm:self-auto"
-										onClick={() => selectReel(reel.id)}
-										type="button"
-									>
-										Edit
-									</button>
-								</div>
-							))}
 						</div>
 					</section>
 				) : null}
