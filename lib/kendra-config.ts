@@ -10,7 +10,7 @@ type KendraAdminTarget = {
 export const KENDRA_ADMIN_TARGETS: KendraAdminTarget[] = [
 	{
 		key: "dashboard",
-		label: "Reel dashboard",
+		label: "Dashboard",
 	},
 ];
 

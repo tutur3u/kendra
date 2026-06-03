@@ -15,7 +15,7 @@ import { readKendraAdminReels } from "@/lib/kendra-admin-reel-model";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-	title: "Reel Dashboard",
+	title: "Admin Dashboard",
 	description: "Kendra audio reel management and publishing controls.",
 };
 

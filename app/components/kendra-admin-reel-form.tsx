@@ -6,7 +6,15 @@ import type {
 	KendraAdminReelStatus,
 } from "@/lib/kendra-admin-reel-model";
 import { slugifyKendraReel } from "@/lib/kendra-admin-reel-model";
-import { FieldError, TextAreaField, TextField } from "./kendra-admin-reel-form-fields";
+import { KendraAdminReelAudioField } from "./kendra-admin-reel-audio-field";
+import {
+	FormSection,
+	ReadOnlyField,
+	SelectField,
+	TextAreaField,
+	TextField,
+	ToggleRow,
+} from "./kendra-admin-reel-form-fields";
 import { labelText } from "./ui";
 
 type ReelDraft = {
@@ -104,7 +112,7 @@ export function KendraAdminReelForm({
 
 		if (!file) return;
 
-		updateDraft("removeAudio", false);
+		setDraft((current) => ({ ...current, duration: "", removeAudio: false }));
 
 		const audio = document.createElement("audio");
 		const url = URL.createObjectURL(file);
@@ -114,12 +122,20 @@ export function KendraAdminReelForm({
 			if (Number.isFinite(audio.duration) && audio.duration > 0) {
 				setDraft((current) => ({
 					...current,
-					duration: current.duration || formatAudioDuration(audio.duration),
+					duration: formatAudioDuration(audio.duration),
 				}));
 			}
 			URL.revokeObjectURL(url);
 		};
 		audio.onerror = () => URL.revokeObjectURL(url);
+	};
+
+	const updateRemoveAudio = (checked: boolean) => {
+		setDraft((current) => ({
+			...current,
+			duration: checked ? "" : (reel?.duration ?? current.duration),
+			removeAudio: checked,
+		}));
 	};
 
 	const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -216,146 +232,129 @@ export function KendraAdminReelForm({
 				</div>
 			) : null}
 
-			<div className="grid gap-4 md:grid-cols-2">
-				<TextField
-					error={fieldErrors.title}
-					label="Title"
-					name="title"
-					onChange={updateDraft}
-					required
-					value={draft.title}
-				/>
-				<TextField
-					error={fieldErrors.slug}
-					label="Slug"
-					name="slug"
-					onChange={(name, value) => {
-						setSlugTouched(true);
-						updateDraft(name, slugifyKendraReel(value));
-					}}
-					required
-					value={draft.slug}
-				/>
-				<label className="grid gap-2">
-					<span className="text-xs font-bold uppercase tracking-[0.14em] text-ink-soft">
-						Status
-					</span>
-					<select
-						className="min-h-11 border border-line bg-white px-3 text-sm text-ink outline-none transition focus:border-accent"
-						onChange={(event) =>
-							updateDraft("status", event.currentTarget.value as KendraAdminReelStatus)
+			<FormSection
+				defaultOpen
+				description="Name the reel and decide whether visitors can see it."
+				kicker="Step 1"
+				title="Basics"
+			>
+				<div className="grid gap-4 md:grid-cols-2">
+					<TextField
+						error={fieldErrors.title}
+						label="Reel name"
+						name="title"
+						onChange={updateDraft}
+						required
+						value={draft.title}
+					/>
+					<TextField
+						label="Category"
+						name="category"
+						onChange={updateDraft}
+						value={draft.category}
+					/>
+					<SelectField
+						error={fieldErrors.status}
+						label="Website visibility"
+						name="status"
+						onChange={(_, value) =>
+							updateDraft("status", value as KendraAdminReelStatus)
 						}
+						options={statusOptions}
 						value={draft.status}
-					>
-						{statusOptions.map((option) => (
-							<option key={option.value} value={option.value}>
-								{option.label}
-							</option>
-						))}
-					</select>
-					<FieldError message={fieldErrors.status} />
-				</label>
-				<TextField
-					label="Category"
-					name="category"
-					onChange={updateDraft}
-					value={draft.category}
-				/>
-				<TextField
-					label="Duration"
-					name="duration"
-					onChange={updateDraft}
-					placeholder="1:23"
-					value={draft.duration}
-				/>
-				<TextField
-					label="Voice style"
-					name="style"
-					onChange={updateDraft}
-					value={draft.style}
-				/>
-				<TextField
-					label="Type"
-					name="subtitle"
-					onChange={updateDraft}
-					value={draft.subtitle}
-				/>
-				<TextField
-					label="Download label"
-					name="downloadLabel"
-					onChange={updateDraft}
-					value={draft.downloadLabel}
-				/>
-			</div>
-
-			<div className="flex items-center justify-between gap-4 border border-line bg-surface px-4 py-3 text-sm text-ink">
-				<span>
-					<label className="block font-semibold" htmlFor={featuredInputId}>
-						Featured reel
-					</label>
-					<span className="text-ink-soft text-xs">Shown first in admin and public lists.</span>
-				</span>
-				<input
-					checked={draft.featured}
-					className="size-5 accent-current"
-					id={featuredInputId}
-					onChange={(event) => updateDraft("featured", event.currentTarget.checked)}
-					type="checkbox"
-				/>
-			</div>
-
-			<TextAreaField
-				label="Public summary"
-				name="summary"
-				onChange={updateDraft}
-				value={draft.summary}
-			/>
-			<TextAreaField
-				label="Script notes"
-				name="scriptNotes"
-				onChange={updateDraft}
-				rows={5}
-				value={draft.scriptNotes}
-			/>
-
-			<div className="grid gap-3 border border-line bg-white p-4">
-				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-					<div>
-						<span className="text-xs font-bold uppercase tracking-[0.14em] text-ink-soft">
-							Audio file
-						</span>
-						<p className="mt-1 text-sm text-ink-soft">
-							{audioFileLabel || reel?.audioFileName || reel?.audioStoragePath || "No audio selected"}
-						</p>
-					</div>
-					<label className="inline-flex min-h-11 cursor-pointer items-center justify-center border border-ink bg-white px-5 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:bg-ink hover:text-white">
-						Choose audio
-						<input
-							accept="audio/*,.aac,.aif,.aiff,.flac,.m4a,.mp3,.ogg,.wav,.webm"
-							className="sr-only"
-							onChange={(event) => onAudioChange(event.currentTarget.files?.[0] ?? null)}
-							type="file"
-						/>
-					</label>
+					/>
+					<ToggleRow
+						checked={draft.featured}
+						description="Pin it near the top of the website list."
+						id={featuredInputId}
+						label="Feature this reel"
+						onChange={(checked) => updateDraft("featured", checked)}
+					/>
 				</div>
-				{reel?.audioUrl ? (
-					<audio className="h-11 w-full" controls preload="metadata" src={reel.audioUrl}>
-						<track kind="captions" />
-					</audio>
-				) : null}
-				<FieldError message={fieldErrors.audioFile} />
-				{reel?.audioAssetId ? (
-					<label className="flex items-center gap-3 text-coral text-sm">
-						<input
-							checked={draft.removeAudio}
-							className="size-4 accent-current"
-							onChange={(event) => updateDraft("removeAudio", event.currentTarget.checked)}
-							type="checkbox"
-						/>
-						Remove current audio on save
-					</label>
-				) : null}
-			</div>
+			</FormSection>
+
+			<FormSection
+				defaultOpen
+				description="Upload the file. The length is detected for you."
+				kicker="Step 2"
+				title="Audio"
+			>
+				<div className="grid gap-4 md:grid-cols-[1fr_13rem]">
+					<KendraAdminReelAudioField
+						audioFileLabel={audioFileLabel}
+						audioUrl={reel?.audioUrl}
+						currentAudioLabel={reel?.audioFileName || reel?.audioStoragePath}
+						error={fieldErrors.audioFile}
+						hasCurrentAudio={Boolean(reel?.audioAssetId) && !audioFile}
+						onAudioChange={onAudioChange}
+						onRemoveAudioChange={updateRemoveAudio}
+						removeAudio={draft.removeAudio}
+					/>
+					<ReadOnlyField
+						help="This updates after you choose an audio file."
+						label="Duration"
+						placeholder="Auto"
+						value={draft.duration}
+					/>
+				</div>
+			</FormSection>
+
+			<FormSection
+				description="Add the short customer-facing copy for the website."
+				kicker="Step 3"
+				title="Public details"
+			>
+				<TextAreaField
+					label="Short description"
+					name="summary"
+					onChange={updateDraft}
+					value={draft.summary}
+				/>
+				<TextAreaField
+					label="Notes"
+					name="scriptNotes"
+					onChange={updateDraft}
+					rows={5}
+					value={draft.scriptNotes}
+				/>
+			</FormSection>
+
+			<FormSection
+				description="Only change these when a link or display label needs to be exact."
+				title="Advanced options"
+			>
+				<div className="grid gap-4 md:grid-cols-2">
+					<TextField
+						error={fieldErrors.slug}
+						label="Website link"
+						name="slug"
+						onChange={(name, value) => {
+							setSlugTouched(true);
+							updateDraft(name, slugifyKendraReel(value));
+						}}
+						required
+						value={draft.slug}
+					/>
+					<TextField
+						label="Voice style"
+						name="style"
+						onChange={updateDraft}
+						value={draft.style}
+					/>
+					<TextField
+						label="Type"
+						name="subtitle"
+						onChange={updateDraft}
+						value={draft.subtitle}
+					/>
+					<TextField
+						label="Download button text"
+						name="downloadLabel"
+						onChange={updateDraft}
+						value={draft.downloadLabel}
+					/>
+				</div>
+			</FormSection>
 
 			{reel ? (
 				<div className="border-t border-line pt-5">

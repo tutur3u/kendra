@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navigation, site } from "../content";
@@ -22,11 +22,17 @@ function Mark() {
 	);
 }
 
+type AdminSessionState = {
+	authenticated: boolean;
+	email: string | null;
+};
+
 export function SiteHeader() {
 	const pathname = usePathname();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
+	const [adminSession, setAdminSession] = useState<AdminSessionState | null>(null);
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -48,6 +54,33 @@ export function SiteHeader() {
 			document.body.style.overflow = "unset";
 		};
 	}, [isMenuOpen]);
+
+	useEffect(() => {
+		if (!isAvatarMenuOpen || adminSession) return;
+
+		let cancelled = false;
+
+		async function loadAdminSession() {
+			try {
+				const response = await fetch("/api/admin/session");
+				const payload = (await response.json().catch(() => null)) as AdminSessionState | null;
+
+				if (!cancelled) {
+					setAdminSession(payload ?? { authenticated: false, email: null });
+				}
+			} catch {
+				if (!cancelled) {
+					setAdminSession({ authenticated: false, email: null });
+				}
+			}
+		}
+
+		void loadAdminSession();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [adminSession, isAvatarMenuOpen]);
 
 	return (
 		<>
@@ -130,21 +163,29 @@ export function SiteHeader() {
 							)}
 							role="menu"
 						>
+							<div className="border-b border-line px-3 py-2">
+								<span className="block text-[0.65rem] font-bold uppercase tracking-[0.18em] text-ink-soft">
+									Account
+								</span>
+								<span className="mt-1 block truncate text-sm font-semibold text-ink">
+									{adminSession?.email ?? "Not signed in"}
+								</span>
+							</div>
 							<Link
 								href="/admin"
 								className="px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface hover:text-accent"
 								onClick={() => setIsAvatarMenuOpen(false)}
 								role="menuitem"
 							>
-								Reel dashboard
+								Dashboard
 							</Link>
 							<Link
-								href="/voice-over#reels"
+								href="/admin/logout"
 								className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent"
 								onClick={() => setIsAvatarMenuOpen(false)}
 								role="menuitem"
 							>
-								Public reels
+								Log out
 							</Link>
 						</div>
 					</div>
