@@ -75,6 +75,8 @@ export type KendraExternalProjectManifest = {
 	version: 1;
 };
 
+export const KENDRA_REEL_COLLECTION_SLUG = "voice-reels";
+
 const PUBLISHED_STATUS = "published" as const;
 
 const voiceReelFields = [
@@ -134,7 +136,7 @@ function voiceReelEntries() {
 					title: "Script notes",
 				},
 			],
-			collectionSlug: "voice-reels",
+			collectionSlug: KENDRA_REEL_COLLECTION_SLUG,
 			profileData: {
 				category: slug === "interactive" ? "Interactive" : demo.type,
 				downloadLabel: "Download MP3",
@@ -162,10 +164,10 @@ export const kendraExternalProjectManifest = {
 			{
 				assetTypes: ["audio"],
 				blockTypes: ["markdown"],
-				collection_type: "voice-reels",
+				collection_type: KENDRA_REEL_COLLECTION_SLUG,
 				description: "Voice-over demo reels optimized for public listening and casting review.",
 				profileFields: voiceReelFields,
-				slug: "voice-reels",
+				slug: KENDRA_REEL_COLLECTION_SLUG,
 				title: "Voice Reels",
 			},
 		],

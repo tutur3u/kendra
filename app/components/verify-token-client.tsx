@@ -113,7 +113,7 @@ export function VerifyTokenClient() {
 				<p className="mt-3 text-sm leading-6 text-white/64">{error}</p>
 				<Link
 					className="mt-6 inline-flex min-h-11 items-center justify-center border border-white bg-white px-5 text-sm font-bold uppercase tracking-[0.12em] text-ink transition hover:bg-transparent hover:text-white"
-					href="/admin/login?next=library"
+					href="/admin/login?next=dashboard"
 				>
 					Sign in again
 				</Link>

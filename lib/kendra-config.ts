@@ -1,39 +1,16 @@
 export const KENDRA_APP_NAME = "kendra";
 
-export type KendraAdminTargetKey =
-	| "dashboard"
-	| "library"
-	| "preview";
+export type KendraAdminTargetKey = "dashboard";
 
 type KendraAdminTarget = {
-	actionLabel: string;
-	description: string;
 	key: KendraAdminTargetKey;
 	label: string;
-	pathSuffix: string;
 };
 
 export const KENDRA_ADMIN_TARGETS: KendraAdminTarget[] = [
 	{
-		actionLabel: "Open reel desk",
-		description: "Review the reel dashboard and jump into audio management.",
 		key: "dashboard",
 		label: "Reel dashboard",
-		pathSuffix: "",
-	},
-	{
-		actionLabel: "Manage reels",
-		description: "Edit voice reel titles, audio files, status, duration, and script notes.",
-		key: "library",
-		label: "Reel library",
-		pathSuffix: "/library",
-	},
-	{
-		actionLabel: "Preview reels",
-		description: "Inspect delivered audio reel data before publishing.",
-		key: "preview",
-		label: "Delivery preview",
-		pathSuffix: "/preview",
 	},
 ];
 
@@ -109,14 +86,6 @@ export function getKendraAppSecret() {
 	return secret.trim();
 }
 
-export function getKendraCmsBaseUrl() {
-	return getConfiguredUrl({
-		envName: "TUTURUUU_CMS_APP_URL",
-		localUrl: "http://localhost:7811",
-		productionUrl: "https://cms.tuturuuu.com",
-	});
-}
-
 export function getKendraWebAppUrl() {
 	return getConfiguredUrl({
 		envName: "TUTURUUU_WEB_APP_URL",
@@ -173,31 +142,7 @@ export function resolveKendraAdminTargetKey(
 ): KendraAdminTargetKey {
 	return KENDRA_ADMIN_TARGETS.some((target) => target.key === value)
 		? (value as KendraAdminTargetKey)
-		: "library";
-}
-
-export function getKendraAdminTarget(key: KendraAdminTargetKey) {
-	return KENDRA_ADMIN_TARGETS.find((target) => target.key === key) ?? KENDRA_ADMIN_TARGETS[1];
-}
-
-export function getKendraCmsWorkspacePath(
-	targetKey: KendraAdminTargetKey,
-	workspaceId = getKendraWorkspaceId(),
-) {
-	const target = getKendraAdminTarget(targetKey);
-	return `/${encodeURIComponent(workspaceId)}${target.pathSuffix}`;
-}
-
-export function buildKendraCmsUrl({
-	cmsBaseUrl = getKendraCmsBaseUrl(),
-	targetKey,
-	workspaceId = getKendraWorkspaceId(),
-}: {
-	cmsBaseUrl?: string;
-	targetKey: KendraAdminTargetKey;
-	workspaceId?: string;
-}) {
-	return new URL(getKendraCmsWorkspacePath(targetKey, workspaceId), cmsBaseUrl).toString();
+		: "dashboard";
 }
 
 export function buildKendraCentralizedLoginUrl({
@@ -220,18 +165,4 @@ export function buildKendraCentralizedLoginUrl({
 
 export function getKendraAdminLoginPath(targetKey: KendraAdminTargetKey) {
 	return `/admin/login?next=${encodeURIComponent(targetKey)}`;
-}
-
-export function buildKendraAdminLinks(workspaceId = getKendraWorkspaceId()) {
-	const cmsBaseUrl = getKendraCmsBaseUrl();
-
-	return KENDRA_ADMIN_TARGETS.map((target) => ({
-		...target,
-		cmsHref: buildKendraCmsUrl({
-			cmsBaseUrl,
-			targetKey: target.key,
-			workspaceId,
-		}),
-		loginHref: getKendraAdminLoginPath(target.key),
-	}));
 }

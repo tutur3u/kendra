@@ -1,140 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { KendraAdminStudioPayload } from "@/lib/kendra-admin-api";
-import type { KendraAdminTargetKey } from "@/lib/kendra-config";
-import type { KendraPublicAssetPlanItem } from "@/lib/kendra-public-asset-sync";
+import { useState } from "react";
+import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
+import { KendraAdminReelForm } from "./kendra-admin-reel-form";
 import {
-	AssetReadinessTable,
-	JsonDetails,
-	readPublicAssetSync,
-	SyncSummary,
-	type SyncState,
-} from "./kendra-admin-sync-panels";
+	AudioTab,
+	countByStatus,
+	formatStatus,
+	ReelList,
+	statusClass,
+	StatTile,
+} from "./kendra-admin-reel-panels";
 import { cn, labelText, shell } from "./ui";
 
-type AdminLink = {
-	actionLabel: string;
-	cmsHref: string;
-	description: string;
-	key: KendraAdminTargetKey;
-	label: string;
-	loginHref: string;
-	pathSuffix: string;
-};
-
-type AdminTab = "reels" | "uploads" | "publish" | "account";
-
-type VoiceReel = {
-	audioUrl: string | null;
-	category: string;
-	duration: string | null;
-	featured: boolean;
-	id: string;
-	status: string;
-	style: string | null;
-	summary: string | null;
-	title: string;
-};
+type AdminTab = "reels" | "audio" | "publish" | "account";
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
 	{ id: "reels", label: "Reels" },
-	{ id: "uploads", label: "Uploads" },
+	{ id: "audio", label: "Audio" },
 	{ id: "publish", label: "Publish" },
 	{ id: "account", label: "Account" },
 ];
-
-function readRecord(value: unknown) {
-	return value && typeof value === "object" && !Array.isArray(value)
-		? (value as Record<string, unknown>)
-		: {};
-}
-
-function readString(record: Record<string, unknown>, key: string) {
-	const value = record[key];
-	return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function readBoolean(record: Record<string, unknown>, key: string) {
-	return record[key] === true;
-}
-
-function getLink(adminLinks: AdminLink[], key: KendraAdminTargetKey) {
-	return adminLinks.find((link) => link.key === key) ?? adminLinks[0]!;
-}
-
-function getEntryCollectionSlug(
-	entry: Record<string, unknown>,
-	collectionById: Map<string, Record<string, unknown>>,
-) {
-	const directSlug = readString(entry, "collectionSlug") ?? readString(entry, "collection_slug");
-	if (directSlug) return directSlug;
-
-	const collectionId = readString(entry, "collection_id");
-	const collection = collectionId ? collectionById.get(collectionId) : null;
-	return collection ? readString(collection, "slug") : null;
-}
-
-function getAssetEntryId(asset: Record<string, unknown>) {
-	return readString(asset, "entry_id") ?? readString(asset, "entryId");
-}
-
-function getAssetType(asset: Record<string, unknown>) {
-	return readString(asset, "asset_type") ?? readString(asset, "assetType");
-}
-
-function getAssetUrl(asset: Record<string, unknown> | undefined) {
-	if (!asset) return null;
-
-	return (
-		readString(asset, "asset_url") ??
-		readString(asset, "assetUrl") ??
-		readString(asset, "source_url") ??
-		readString(asset, "sourceUrl")
-	);
-}
-
-function readVoiceReels(studio: KendraAdminStudioPayload) {
-	const collectionById = new Map(
-		studio.collections.map((collection) => [String(collection.id), collection]),
-	);
-	const audioAssets = studio.assets.filter((asset) => getAssetType(asset) === "audio");
-
-	return studio.entries
-		.filter((entry) => getEntryCollectionSlug(entry, collectionById) === "voice-reels")
-		.map<VoiceReel>((entry) => {
-			const profileData = readRecord(entry.profile_data ?? entry.profileData);
-			const audioAsset = audioAssets.find((asset) => getAssetEntryId(asset) === String(entry.id));
-			const audioMetadata = readRecord(audioAsset?.metadata);
-
-			return {
-				audioUrl: getAssetUrl(audioAsset),
-				category: readString(profileData, "category") ?? "Voice reel",
-				duration:
-					readString(profileData, "duration") ?? readString(audioMetadata, "duration"),
-				featured: readBoolean(profileData, "featured"),
-				id: String(entry.id),
-				status: readString(entry, "status") ?? "draft",
-				style: readString(profileData, "style"),
-				summary: readString(entry, "summary"),
-				title: readString(entry, "title") ?? "Untitled reel",
-			};
-		})
-		.sort((left, right) => Number(right.featured) - Number(left.featured) || left.title.localeCompare(right.title));
-}
-
-function formatStatus(value: string) {
-	return value
-		.split("-")
-		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-		.join(" ");
-}
-
-function statusClass(value: string) {
-	if (value === "published") return "border-green/25 bg-green/10 text-green-deep";
-	if (value === "draft") return "border-sun/35 bg-sun/15 text-ink";
-	return "border-line bg-surface text-ink-soft";
-}
 
 function getInitials(email: string | null) {
 	if (!email) return "KB";
@@ -146,68 +32,55 @@ function getInitials(email: string | null) {
 }
 
 export function KendraAdminClient({
-	adminLinks,
-	initialStudio,
-	initialTarget,
-	publicAssets,
+	initialReels,
 	userEmail,
 }: {
-	adminLinks: AdminLink[];
-	initialStudio: KendraAdminStudioPayload;
-	initialTarget: KendraAdminTargetKey;
-	publicAssets: KendraPublicAssetPlanItem[];
+	initialReels: KendraAdminReel[];
 	userEmail: string | null;
 }) {
-	const [activeTab, setActiveTab] = useState<AdminTab>(
-		initialTarget === "preview" ? "publish" : "reels",
-	);
-	const [forceApply, setForceApply] = useState(false);
+	const [activeTab, setActiveTab] = useState<AdminTab>("reels");
 	const [accountOpen, setAccountOpen] = useState(false);
-	const [syncState, setSyncState] = useState<SyncState>({ kind: "idle" });
-	const reels = useMemo(() => readVoiceReels(initialStudio), [initialStudio]);
-	const publicAssetSync = readPublicAssetSync(syncState.payload);
-	const libraryLink = getLink(adminLinks, "library");
-	const previewLink = getLink(adminLinks, "preview");
-	const publishedCount = reels.filter((reel) => reel.status === "published").length;
-	const draftCount = reels.filter((reel) => reel.status !== "published").length;
-	const readyAudioFiles = publicAssets.filter((asset) => asset.metadata).length;
-	const missingAudioFiles = publicAssets.length - readyAudioFiles;
+	const [reels, setReels] = useState(initialReels);
+	const [selectedId, setSelectedId] = useState<string | null>(
+		initialReels[0]?.id ?? null,
+	);
+	const [publishMessage, setPublishMessage] = useState<string | null>(null);
+	const [refreshing, setRefreshing] = useState(false);
+	const selectedReel = selectedId
+		? reels.find((reel) => reel.id === selectedId) ?? null
+		: null;
+	const publishedCount = countByStatus(reels, "published");
+	const readyAudioFiles = reels.filter((reel) => reel.audioUrl).length;
 
-	const runSync = async (mode: "diff" | "apply") => {
-		setSyncState({
-			kind: "loading",
-			label: mode === "diff" ? "Checking reel changes" : "Publishing reels",
-		});
+	const selectReel = (id: string) => {
+		setSelectedId(id);
+		setActiveTab("reels");
+	};
+
+	const refreshPublicPages = async () => {
+		setRefreshing(true);
+		setPublishMessage(null);
 
 		try {
-			const response = await fetch(`/api/admin/sync/${mode}`, {
-				body: mode === "apply" ? JSON.stringify({ force: forceApply }) : undefined,
-				headers:
-					mode === "apply"
-						? {
-								"Content-Type": "application/json",
-							}
-						: undefined,
-				method: "POST",
-			});
-			const payload = (await response.json().catch(() => null)) as unknown;
+			const response = await fetch("/api/admin/reels/refresh", { method: "POST" });
+			const payload = (await response.json().catch(() => ({}))) as {
+				error?: string;
+				reels?: KendraAdminReel[];
+			};
 
 			if (!response.ok) {
-				setSyncState({
-					kind: "error",
-					payload: payload ?? { error: `Request failed with ${response.status}` },
-				});
+				setPublishMessage(payload.error ?? "We could not refresh the public pages.");
 				return;
 			}
 
-			setSyncState({ kind: "success", payload });
+			setReels(payload.reels ?? []);
+			setPublishMessage("Public reel pages refreshed.");
 		} catch (error) {
-			setSyncState({
-				kind: "error",
-				payload: {
-					error: error instanceof Error ? error.message : "Sync request failed",
-				},
-			});
+			setPublishMessage(
+				error instanceof Error ? error.message : "We could not refresh the public pages.",
+			);
+		} finally {
+			setRefreshing(false);
 		}
 	};
 
@@ -216,24 +89,24 @@ export function KendraAdminClient({
 			<section className={cn(shell, "grid gap-8 py-[clamp(32px,6vw,72px)]")}>
 				<header className="flex flex-col gap-6 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
 					<div className="max-w-3xl">
-						<span className={labelText}>Audio reel desk</span>
+						<span className={labelText}>Kendra admin</span>
 						<h1 className="mt-3 text-balance font-serif text-[clamp(3rem,8vw,7rem)] italic leading-[0.86] tracking-tight text-ink">
-							Reels ready for casting.
+							Audio reels, edited in one place.
 						</h1>
 						<p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-soft md:text-lg">
-							Manage Kendra's public listening room, confirm audio files, and publish reel updates from one focused dashboard.
+							Create reels, replace audio, publish public entries, and remove outdated demos from a focused workspace.
 						</p>
 					</div>
 
 					<div className="relative self-start lg:self-end">
 						<button
-							type="button"
-							className="flex min-h-12 items-center gap-3 rounded-full border border-line bg-white px-3 py-2 text-left shadow-[0_16px_44px_rgba(10,10,10,0.08)] transition hover:border-accent"
 							aria-expanded={accountOpen}
 							aria-haspopup="menu"
+							className="flex min-h-12 items-center gap-3 border border-line bg-white px-3 py-2 text-left shadow-[0_16px_44px_rgba(10,10,10,0.08)] transition hover:border-accent"
 							onClick={() => setAccountOpen((value) => !value)}
+							type="button"
 						>
-							<span className="grid size-8 place-items-center rounded-full bg-ink text-[0.72rem] font-bold text-white">
+							<span className="grid size-8 place-items-center bg-ink text-[0.72rem] font-bold text-white">
 								{getInitials(userEmail)}
 							</span>
 							<span className="grid min-w-0">
@@ -246,24 +119,39 @@ export function KendraAdminClient({
 						<div
 							className={cn(
 								"absolute right-0 top-14 z-20 grid min-w-56 gap-1 border border-line bg-white p-2 shadow-[0_22px_70px_rgba(10,10,10,0.14)] transition",
-								accountOpen ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0",
+								accountOpen
+									? "translate-y-0 opacity-100"
+									: "pointer-events-none -translate-y-1 opacity-0",
 							)}
 							role="menu"
 						>
-							<a className="px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface hover:text-accent" href={libraryLink.cmsHref} rel="noreferrer" role="menuitem" target="_blank">
-								Open reel editor
+							<a
+								className="px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface hover:text-accent"
+								href="/voice-over#reels"
+								role="menuitem"
+							>
+								View public reels
 							</a>
-							<a className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent" href="/admin/logout" role="menuitem">
+							<a
+								className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent"
+								href="/admin/logout"
+								role="menuitem"
+							>
 								Sign out
 							</a>
 						</div>
 					</div>
 				</header>
 
-				<div className="flex flex-wrap gap-2 border-b border-line">
+				<div className="grid gap-3 sm:grid-cols-3">
+					<StatTile label="Total reels" value={reels.length} />
+					<StatTile label="Published" value={publishedCount} />
+					<StatTile label="Audio ready" value={readyAudioFiles} />
+				</div>
+
+				<nav className="flex flex-wrap gap-2 border-b border-line" aria-label="Admin sections">
 					{tabs.map((tab) => (
 						<button
-							type="button"
 							className={cn(
 								"min-h-11 border-b-2 px-4 text-sm font-bold uppercase tracking-[0.12em] transition",
 								activeTab === tab.id
@@ -272,149 +160,97 @@ export function KendraAdminClient({
 							)}
 							key={tab.id}
 							onClick={() => setActiveTab(tab.id)}
+							type="button"
 						>
 							{tab.label}
 						</button>
 					))}
-				</div>
+				</nav>
 
 				{activeTab === "reels" ? (
-					<section className="grid gap-5">
-						<div className="grid gap-3 sm:grid-cols-3">
-							<div className="border border-line bg-white p-5">
-								<span className={labelText}>Published reels</span>
-								<strong className="mt-4 block font-serif text-5xl font-normal italic leading-none text-ink tabular-nums">
-									{publishedCount}
-								</strong>
-							</div>
-							<div className="border border-line bg-white p-5">
-								<span className={labelText}>Needs review</span>
-								<strong className="mt-4 block font-serif text-5xl font-normal italic leading-none text-ink tabular-nums">
-									{draftCount}
-								</strong>
-							</div>
-							<div className="border border-line bg-white p-5">
-								<span className={labelText}>Audio ready</span>
-								<strong className="mt-4 block font-serif text-5xl font-normal italic leading-none text-ink tabular-nums">
-									{readyAudioFiles}
-								</strong>
-							</div>
-						</div>
-
-						<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-							<div>
-								<h2 className="font-serif text-4xl font-normal italic leading-none text-ink">Voice reels</h2>
-								<p className="mt-2 text-sm text-ink-soft">Each published reel appears on the public listening pages.</p>
-							</div>
-							<a className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent" href={libraryLink.cmsHref} rel="noreferrer" target="_blank">
-								Add or edit reels
-							</a>
-						</div>
-
-						<div className="grid gap-3">
-							{reels.length > 0 ? (
-								reels.map((reel) => (
-									<article className="grid gap-4 border border-line bg-white p-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]" key={reel.id}>
-										<div className="min-w-0">
-											<div className="flex flex-wrap items-center gap-2">
-												<span className={cn("rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-[0.12em]", statusClass(reel.status))}>
-													{formatStatus(reel.status)}
-												</span>
-												{reel.featured ? (
-													<span className="rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-accent text-xs font-bold uppercase tracking-[0.12em]">
-														Featured
-													</span>
-												) : null}
-												<span className="text-ink-soft text-xs">{reel.category}</span>
-											</div>
-											<h3 className="mt-3 font-serif text-3xl font-normal italic leading-none text-ink">{reel.title}</h3>
-											<div className="mt-2 flex flex-wrap gap-3 text-ink-soft text-sm">
-												{reel.duration ? <span>{reel.duration}</span> : null}
-												{reel.style ? <span>{reel.style}</span> : null}
-											</div>
-											{reel.summary ? <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft">{reel.summary}</p> : null}
-										</div>
-										<div className="grid content-center gap-3">
-											{reel.audioUrl ? (
-												<audio className="h-11 w-full" controls preload="metadata" src={reel.audioUrl}>
-													<track kind="captions" />
-												</audio>
-											) : (
-												<div className="border border-coral/25 bg-coral/10 p-4 text-coral text-sm">
-													Audio file missing. Upload one before publishing.
-												</div>
-											)}
-											<a className="text-sm font-bold uppercase tracking-[0.12em] text-accent underline decoration-accent/25 underline-offset-4" href={libraryLink.cmsHref} rel="noreferrer" target="_blank">
-												Edit in reel editor
-											</a>
-										</div>
-									</article>
-								))
-							) : (
-								<div className="border border-dashed border-line bg-white p-8">
-									<h3 className="font-serif text-3xl font-normal italic text-ink">No reels synced yet.</h3>
-									<p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">
-										Start by publishing the seeded reel manifest, then add more audio files in the reel editor.
-									</p>
-								</div>
-							)}
+					<section className="grid gap-6 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]">
+						<ReelList
+							onNew={() => setSelectedId(null)}
+							onSelect={setSelectedId}
+							reels={reels}
+							selectedId={selectedId}
+						/>
+						<div className="border border-line bg-white p-5">
+							<KendraAdminReelForm
+								key={selectedReel?.id ?? "new"}
+								onDeleted={(nextReels) => {
+									setReels(nextReels);
+									setSelectedId(nextReels[0]?.id ?? null);
+								}}
+								onSaved={(nextReels, savedReel) => {
+									setReels(nextReels);
+									setSelectedId(savedReel?.id ?? nextReels[0]?.id ?? null);
+								}}
+								reel={selectedReel}
+							/>
 						</div>
 					</section>
 				) : null}
 
-				{activeTab === "uploads" ? (
-					<section className="grid gap-5">
-						<div className="grid gap-3 sm:grid-cols-2">
-							<div className="border border-line bg-white p-5">
-								<span className={labelText}>Ready files</span>
-								<strong className="mt-4 block font-serif text-5xl font-normal italic leading-none text-ink tabular-nums">
-									{readyAudioFiles}
-								</strong>
-							</div>
-							<div className="border border-line bg-white p-5">
-								<span className={labelText}>Missing files</span>
-								<strong className="mt-4 block font-serif text-5xl font-normal italic leading-none text-ink tabular-nums">
-									{missingAudioFiles}
-								</strong>
-							</div>
-						</div>
-						<AssetReadinessTable assets={publicAssets} sync={publicAssetSync} />
-					</section>
-				) : null}
+				{activeTab === "audio" ? <AudioTab onSelect={selectReel} reels={reels} /> : null}
 
 				{activeTab === "publish" ? (
 					<section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
 						<div className="border border-line bg-white p-5">
-							<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-								<div>
-									<span className={labelText}>Publish controls</span>
-									<h2 className="mt-3 font-serif text-4xl font-normal italic leading-none text-ink">Check, then publish.</h2>
-									<p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">
-										Check compares reel changes. Publish uploads public audio files, applies the reel manifest, and refreshes the public pages.
-									</p>
-								</div>
-								<label className="inline-flex items-center gap-3 rounded-full border border-line bg-surface px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-ink-soft">
-									<input checked={forceApply} className="h-4 w-4 accent-current" onChange={(event) => setForceApply(event.currentTarget.checked)} type="checkbox" />
-									Replace existing
-								</label>
-							</div>
-
+							<span className={labelText}>Public status</span>
+							<h2 className="mt-3 font-serif text-4xl font-normal italic leading-none text-ink">
+								{publishedCount} live reel{publishedCount === 1 ? "" : "s"}
+							</h2>
+							<p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">
+								Published reels with audio are available on the website after refresh.
+							</p>
 							<div className="mt-6 grid gap-3 sm:grid-cols-2">
-								<button className="min-h-12 rounded-full border border-ink bg-white px-6 text-sm font-bold uppercase tracking-[0.12em] text-ink transition hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={syncState.kind === "loading"} onClick={() => void runSync("diff")} type="button">
-									Check changes
+								<button
+									className="min-h-12 border border-ink bg-ink px-6 text-sm font-bold uppercase tracking-[0.12em] text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+									disabled={refreshing}
+									onClick={() => void refreshPublicPages()}
+									type="button"
+								>
+									{refreshing ? "Refreshing" : "Refresh website"}
 								</button>
-								<button className="min-h-12 rounded-full bg-ink px-6 text-sm font-bold uppercase tracking-[0.12em] text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50" disabled={syncState.kind === "loading"} onClick={() => void runSync("apply")} type="button">
-									Publish reels
-								</button>
+								<a
+									className="inline-flex min-h-12 items-center justify-center border border-line bg-white px-6 text-sm font-bold uppercase tracking-[0.12em] text-ink transition hover:border-accent hover:text-accent"
+									href="/voice-over#reels"
+								>
+									View reels
+								</a>
 							</div>
-							<a className="mt-5 inline-flex text-sm font-bold uppercase tracking-[0.12em] text-accent underline decoration-accent/25 underline-offset-4" href={previewLink.cmsHref} rel="noreferrer" target="_blank">
-								Open delivery preview
-							</a>
+							{publishMessage ? (
+								<div className="mt-5 border border-line bg-surface px-4 py-3 text-sm text-ink-soft">
+									{publishMessage}
+								</div>
+							) : null}
 						</div>
 
-						<div className="grid gap-4">
-							<SyncSummary state={syncState} />
-							<JsonDetails state={syncState} />
+						<div className="grid gap-3 border border-line bg-white p-5">
+							<span className={labelText}>Publish checks</span>
+							{reels.map((reel) => (
+								<div
+									className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
+									key={reel.id}
+								>
+									<div>
+										<strong className="text-sm text-ink">{reel.title}</strong>
+										<div className="mt-1 text-ink-soft text-xs">
+											{reel.audioUrl ? "Audio ready" : "Audio missing"}
+											{" / "}
+											{formatStatus(reel.status)}
+										</div>
+									</div>
+									<button
+										className="self-start font-bold text-accent text-xs uppercase tracking-[0.12em] underline decoration-accent/25 underline-offset-4 sm:self-auto"
+										onClick={() => selectReel(reel.id)}
+										type="button"
+									>
+										Edit
+									</button>
+								</div>
+							))}
 						</div>
 					</section>
 				) : null}
@@ -424,21 +260,30 @@ export function KendraAdminClient({
 						<div className="border border-line bg-white p-6">
 							<span className={labelText}>Signed in</span>
 							<div className="mt-4 flex items-center gap-4">
-								<span className="grid size-14 place-items-center rounded-full bg-ink font-bold text-white">{getInitials(userEmail)}</span>
+								<span className="grid size-14 place-items-center bg-ink font-bold text-white">
+									{getInitials(userEmail)}
+								</span>
 								<div className="min-w-0">
-									<div className="truncate font-semibold text-ink">{userEmail ?? "Kendra admin session"}</div>
-									<div className="text-ink-soft text-sm">Can manage audio reels and publish public updates.</div>
+									<div className="truncate font-semibold text-ink">
+										{userEmail ?? "Kendra admin session"}
+									</div>
+									<div className="text-ink-soft text-sm">
+										Can manage audio reels and public delivery.
+									</div>
 								</div>
 							</div>
 						</div>
 						<div className="grid content-start gap-3 border border-line bg-white p-6">
-							<a className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent" href={libraryLink.cmsHref} rel="noreferrer" target="_blank">
-								Open reel editor
-							</a>
-							<a className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-white px-6 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent" href="/voice-over#reels">
+							<a
+								className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-6 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent"
+								href="/voice-over#reels"
+							>
 								View public reels
 							</a>
-							<a className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-white px-6 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent" href="/admin/logout">
+							<a
+								className="inline-flex min-h-11 items-center justify-center border border-line bg-white px-6 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent"
+								href="/admin/logout"
+							>
 								Sign out
 							</a>
 						</div>
