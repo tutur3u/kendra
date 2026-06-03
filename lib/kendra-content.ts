@@ -189,42 +189,9 @@ function getAssetUrl(
 	return absolutizeUrl(apiBaseUrl, asset?.assetUrl ?? asset?.source_url ?? null);
 }
 
-function splitParagraphs(markdown: string | null) {
-	if (!markdown) return null;
-
-	const paragraphs = markdown
-		.split(/\n{2,}/)
-		.map((paragraph) => paragraph.trim())
-		.filter(Boolean);
-
-	return paragraphs.length > 0 ? paragraphs : null;
-}
-
-function buildSite(delivery: KendraDeliveryPayload, apiBaseUrl: string) {
-	const profileEntry = getEntry(getCollection(delivery, "profile"), "profile");
-	const profileData = asRecord(profileEntry?.profile_data);
-	const heroImage = getAssetUrl(profileEntry, "image", apiBaseUrl);
-
-	return {
-		...site,
-		email: asString(profileData.email) ?? site.email,
-		gvaaUrl: asString(profileData.gvaaUrl) ?? site.gvaaUrl,
-		heroImage: heroImage ?? asString(profileData.heroImage) ?? site.heroImage,
-		heroImageAlt:
-			getLeadAsset(profileEntry, "image")?.alt_text ??
-			asString(profileData.heroImageAlt) ??
-			site.heroImageAlt,
-		location: asString(profileData.location) ?? site.location,
-		name: profileEntry?.title ?? asString(profileData.name) ?? site.name,
-		resumeUrl: asString(profileData.resumeUrl) ?? site.resumeUrl,
-		tagline: asString(profileData.tagline) ?? profileEntry?.subtitle ?? site.tagline,
-		title: asString(profileData.title) ?? site.title,
-	};
-}
-
-function buildBio(delivery: KendraDeliveryPayload) {
-	const profileEntry = getEntry(getCollection(delivery, "profile"), "profile");
-	return splitParagraphs(getMarkdown(profileEntry)) ?? bio;
+function getAssetDuration(entry: DeliveryEntry | null | undefined, assetType: string) {
+	const duration = asRecord(getLeadAsset(entry, assetType)?.metadata).duration;
+	return asString(duration);
 }
 
 function buildDemos(delivery: KendraDeliveryPayload, apiBaseUrl: string) {
@@ -247,7 +214,7 @@ function buildDemos(delivery: KendraDeliveryPayload, apiBaseUrl: string) {
 				category: asString(profileData.category) ?? "Voice reel",
 				description: entry.summary ?? getMarkdown(entry) ?? "",
 				downloadLabel: asString(profileData.downloadLabel) ?? "Download",
-				duration: asString(profileData.duration) ?? undefined,
+				duration: asString(profileData.duration) ?? getAssetDuration(entry, "audio") ?? undefined,
 				featured: asBoolean(profileData.featured),
 				scriptNotes: getMarkdown(entry) ?? undefined,
 				status: entry.status === "published" ? "Available" : entry.status,
@@ -259,69 +226,6 @@ function buildDemos(delivery: KendraDeliveryPayload, apiBaseUrl: string) {
 		.filter((demo): demo is KendraDemo => Boolean(demo));
 
 	return mapped.length > 0 ? mapped : demos;
-}
-
-function buildExperienceGroups(delivery: KendraDeliveryPayload) {
-	const creditEntries = getCollection(delivery, "credits")?.entries ?? [];
-
-	if (creditEntries.length === 0) {
-		return experienceGroups;
-	}
-
-	const groups = new Map<string, KendraCreditItem[]>();
-
-	for (const entry of creditEntries) {
-		const profileData = asRecord(entry.profile_data);
-		const groupName = asString(profileData.group) ?? "Experience";
-		const items = groups.get(groupName) ?? [];
-		const visual = asRecord(profileData.visual) as KendraCreditVisual;
-
-		items.push({
-			project: entry.title,
-			role: asString(profileData.role) ?? entry.subtitle ?? entry.summary ?? "",
-			visual:
-				Object.keys(visual).length > 0
-					? visual
-					: {
-							label: entry.title,
-							tone: asString(profileData.tone) ?? "studio",
-						},
-		});
-		groups.set(groupName, items);
-	}
-
-	return [...groups.entries()].map(([title, items]) => ({ items, title }));
-}
-
-function buildStudioSpecs(delivery: KendraDeliveryPayload) {
-	const studioEntries = getCollection(delivery, "studio")?.entries ?? [];
-	const specs = studioEntries
-		.filter((entry) => asString(asRecord(entry.profile_data).kind) !== "availability")
-		.map((entry) => {
-			const profileData = asRecord(entry.profile_data);
-			return {
-				label: asString(profileData.label) ?? entry.title,
-				value: asString(profileData.value) ?? entry.summary ?? getMarkdown(entry) ?? "",
-			};
-		})
-		.filter((spec) => spec.value);
-
-	return specs.length > 0 ? specs : studioSpecs;
-}
-
-function buildAvailability(delivery: KendraDeliveryPayload) {
-	const studioEntries = getCollection(delivery, "studio")?.entries ?? [];
-	const items = studioEntries
-		.filter((entry) => asString(asRecord(entry.profile_data).kind) === "availability")
-		.map((entry) => entry.summary ?? getMarkdown(entry) ?? entry.title)
-		.filter(Boolean);
-
-	return items.length > 0 ? items : availability;
-}
-
-function buildContactIntro(delivery: KendraDeliveryPayload) {
-	const contactEntry = getEntry(getCollection(delivery, "contact"), "booking");
-	return contactEntry?.summary ?? getMarkdown(contactEntry) ?? contactIntro;
 }
 
 export function buildKendraContent(
@@ -337,16 +241,16 @@ export function buildKendraContent(
 	}
 
 	return {
-		availability: buildAvailability(delivery),
-		bio: buildBio(delivery),
+		availability,
+		bio,
 		clientLogos,
-		contactIntro: buildContactIntro(delivery),
+		contactIntro,
 		demos: buildDemos(delivery, apiBaseUrl),
-		experienceGroups: buildExperienceGroups(delivery),
+		experienceGroups,
 		navigation,
 		notableClients,
 		performanceModes,
-		site: buildSite(delivery, apiBaseUrl),
-		studioSpecs: buildStudioSpecs(delivery),
+		site,
+		studioSpecs,
 	};
 }

@@ -61,8 +61,8 @@ function metadataSummary(asset: KendraPublicAssetPlanItem) {
 export function JsonDetails({ state }: { state: SyncState }) {
 	if (state.kind === "idle") {
 		return (
-			<div className="rounded-2xl border border-dashed border-line bg-white p-5 text-sm leading-relaxed text-ink-soft">
-				Run a diff or push the manifest to inspect the CMS response.
+		<div className="rounded-2xl border border-dashed border-line bg-white p-5 text-sm leading-relaxed text-ink-soft">
+				Check or publish reels to inspect the response.
 			</div>
 		);
 	}
@@ -78,7 +78,7 @@ export function JsonDetails({ state }: { state: SyncState }) {
 	return (
 		<details className="group rounded-2xl border border-line bg-white">
 			<summary className="cursor-pointer list-none px-5 py-4 text-sm font-bold uppercase tracking-[0.14em] text-ink transition hover:text-accent">
-				Response details
+				Developer response
 			</summary>
 			<div className="border-line border-t p-0">
 				<pre
@@ -108,8 +108,8 @@ export function AssetReadinessTable({
 		<section className="overflow-hidden rounded-2xl border border-line bg-white">
 			<div className="flex flex-col gap-2 border-line border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<span className={labelText}>Asset readiness</span>
-					<p className="mt-1 text-sm text-ink-soft">Public assets are uploaded before the CMS manifest is applied.</p>
+					<span className={labelText}>Audio readiness</span>
+					<p className="mt-1 text-sm text-ink-soft">Audio files are checked before public reel updates are published.</p>
 				</div>
 				<span className="text-sm font-medium text-ink-soft tabular-nums">
 					{assets.length} file{assets.length === 1 ? "" : "s"}
@@ -120,7 +120,7 @@ export function AssetReadinessTable({
 					<thead className="bg-surface text-[0.65rem] uppercase tracking-[0.18em] text-ink-soft">
 						<tr>
 							<th className="px-5 py-3 font-bold">File</th>
-							<th className="px-5 py-3 font-bold">CMS location</th>
+							<th className="px-5 py-3 font-bold">Reel</th>
 							<th className="px-5 py-3 font-bold">Public path</th>
 							<th className="px-5 py-3 font-bold">Observed metadata</th>
 							<th className="px-5 py-3 font-bold">Status</th>
@@ -177,7 +177,7 @@ export function SyncSummary({ state }: { state: SyncState }) {
 	if (state.kind === "error") {
 		return (
 			<div className="rounded-2xl border border-coral/25 bg-coral/10 p-5">
-				<div className="font-semibold text-coral">Manifest push needs attention</div>
+				<div className="font-semibold text-coral">Reel publish needs attention</div>
 				<p className="mt-2 text-sm leading-relaxed text-ink-soft">{error ?? "The request failed. Review the details and try again."}</p>
 				{sync?.skipped?.length ? (
 					<ul className="mt-4 grid gap-2 text-sm">
@@ -195,11 +195,11 @@ export function SyncSummary({ state }: { state: SyncState }) {
 
 	return (
 		<div className="rounded-2xl border border-green/25 bg-green/10 p-5">
-			<div className="font-semibold text-green-deep">CMS manifest is ready</div>
+			<div className="font-semibold text-green-deep">Reels are ready</div>
 			<p className="mt-2 text-sm leading-relaxed text-ink-soft">
 				{sync
-					? `${sync.uploaded?.length ?? 0} public asset(s) uploaded, ${sync.skipped?.length ?? 0} skipped.`
-					: "The CMS response completed successfully."}
+					? `${sync.uploaded?.length ?? 0} audio file(s) uploaded, ${sync.skipped?.length ?? 0} skipped.`
+					: "The reel update completed successfully."}
 			</p>
 		</div>
 	);

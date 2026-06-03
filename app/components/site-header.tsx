@@ -25,6 +25,7 @@ function Mark() {
 export function SiteHeader() {
 	const pathname = usePathname();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
 
 	useEffect(() => {
@@ -102,19 +103,51 @@ export function SiteHeader() {
 								</Link>
 							);
 						})}
-						<Link
-							href="/admin"
+					</nav>
+
+					<div className="relative">
+						<button
+							type="button"
 							className={cn(
-								"rounded-full border px-4 py-2 text-[0.68rem] font-bold uppercase tracking-[0.18em] transition duration-300",
+								"grid h-10 w-10 place-items-center rounded-full border text-[0.72rem] font-bold uppercase tracking-[0.08em] transition duration-300",
 								pathname.startsWith("/admin")
 									? "border-accent bg-accent text-white"
-									: "border-line text-ink-soft hover:border-accent hover:text-accent",
+									: "border-line bg-white/70 text-ink hover:border-accent hover:text-accent",
 							)}
-							aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+							aria-expanded={isAvatarMenuOpen}
+							aria-haspopup="menu"
+							aria-label="Open account menu"
+							onClick={() => setIsAvatarMenuOpen((value) => !value)}
 						>
-							Admin
-						</Link>
-					</nav>
+							KB
+						</button>
+						<div
+							className={cn(
+								"absolute right-0 top-12 z-50 grid min-w-56 gap-1 border border-line bg-white p-2 shadow-[0_22px_70px_rgba(10,10,10,0.14)] transition",
+								isAvatarMenuOpen
+									? "translate-y-0 opacity-100"
+									: "pointer-events-none -translate-y-1 opacity-0",
+							)}
+							role="menu"
+						>
+							<Link
+								href="/admin"
+								className="px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface hover:text-accent"
+								onClick={() => setIsAvatarMenuOpen(false)}
+								role="menuitem"
+							>
+								Reel dashboard
+							</Link>
+							<Link
+								href="/voice-over#reels"
+								className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent"
+								onClick={() => setIsAvatarMenuOpen(false)}
+								role="menuitem"
+							>
+								Public reels
+							</Link>
+						</div>
+					</div>
 
 					{/* Mobile Menu Toggle */}
 					<button
@@ -158,21 +191,6 @@ export function SiteHeader() {
 							</Link>
 						);
 					})}
-					<Link
-						href="/admin"
-						className={cn(
-							"rounded-full border px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] transition-all duration-300",
-							pathname.startsWith("/admin")
-								? "border-accent bg-accent text-white"
-								: "border-line text-ink",
-							isMenuOpen ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-						)}
-						style={{ transitionDelay: `${navigation.length * 100}ms` }}
-						onClick={() => setIsMenuOpen(false)}
-						aria-current={pathname.startsWith("/admin") ? "page" : undefined}
-					>
-						Admin
-					</Link>
 					<div 
 						className={cn(
 							"mt-12 flex flex-col items-center gap-4 transition-all duration-500 delay-300",

@@ -4,8 +4,6 @@ import { KendraAdminClient } from "../components/kendra-admin-client";
 import {
 	buildKendraAdminLinks,
 	getKendraAdminLoginPath,
-	getKendraCmsBaseUrl,
-	getKendraWebAppUrl,
 	getKendraWorkspaceId,
 	resolveKendraAdminTargetKey,
 } from "@/lib/kendra-config";
@@ -23,8 +21,8 @@ export const dynamic = "force-dynamic";
 type SdkManifest = Parameters<ExternalProjectsClient["applySyncManifest"]>[1];
 
 export const metadata: Metadata = {
-	title: "Admin",
-	description: "Kendra Tuturuuu CMS sync and admin controls.",
+	title: "Reel Dashboard",
+	description: "Kendra audio reel management and publishing controls.",
 };
 
 function emptyStudio(): KendraAdminStudioPayload {
@@ -60,12 +58,9 @@ export default async function AdminPage({
 			publicAssets={await getKendraPublicManifestAssetPlan(
 				kendraExternalProjectManifest as unknown as SdkManifest,
 			)}
-			cmsBaseUrl={getKendraCmsBaseUrl()}
 			initialStudio={studio}
 			initialTarget={targetKey}
 			userEmail={session.user.email}
-			webAppUrl={getKendraWebAppUrl()}
-			workspaceId={workspaceId}
 		/>
 	);
 }

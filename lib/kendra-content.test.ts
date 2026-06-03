@@ -92,4 +92,105 @@ describe("Kendra CMS content mapping", () => {
 			type: "Audio reel",
 		});
 	});
+
+	test("uses audio asset metadata duration when the reel field is empty", () => {
+		const content = buildKendraContent(
+			{
+				adapter: "kendra",
+				canonicalProjectId: "kendra-main",
+				collections: [
+					{
+						collection_type: "voice-reels",
+						config: null,
+						description: null,
+						id: "collection-reels",
+						slug: "voice-reels",
+						title: "Voice Reels",
+						entries: [
+							{
+								assets: [
+									{
+										alt_text: "Narration reel",
+										assetUrl: "/api/v1/workspaces/ws-kendra/external-projects/assets/audio-2",
+										asset_type: "audio",
+										block_id: null,
+										entry_id: "entry-reel-2",
+										id: "audio-2",
+										metadata: { duration: "0:42" },
+										sort_order: 0,
+										source_url: null,
+										storage_path:
+											"external-projects/kendra/voice-reels/narration/narration.mp3",
+									},
+								],
+								blocks: [],
+								id: "entry-reel-2",
+								metadata: {},
+								profile_data: {},
+								published_at: "2026-05-17T09:00:00.000Z",
+								slug: "narration",
+								status: "published",
+								subtitle: "Audio reel",
+								summary: "Narration sample.",
+								title: "Narration Reel",
+							},
+						],
+					},
+				],
+				generatedAt: "2026-05-17T09:00:00.000Z",
+				loadingData: null,
+				profileData: {},
+				workspaceId: "ws-kendra",
+			},
+			{ apiBaseUrl: "https://platform.example/api/v1" },
+		);
+
+		expect(content.demos[0]?.duration).toBe("0:42");
+	});
+
+	test("keeps non-audio site sections static even if old CMS collections exist", () => {
+		const content = buildKendraContent(
+			{
+				adapter: "kendra",
+				canonicalProjectId: "kendra-main",
+				collections: [
+					{
+						collection_type: "profile",
+						config: null,
+						description: null,
+						id: "collection-profile",
+						slug: "profile",
+						title: "Profile",
+						entries: [
+							{
+								assets: [],
+								blocks: [],
+								id: "entry-profile",
+								metadata: {},
+								profile_data: {
+									tagline: "Should not replace static tagline",
+								},
+								published_at: "2026-05-17T09:00:00.000Z",
+								slug: "profile",
+								status: "published",
+								subtitle: null,
+								summary: null,
+								title: "CMS Profile",
+							},
+						],
+					},
+				],
+				generatedAt: "2026-05-17T09:00:00.000Z",
+				loadingData: null,
+				profileData: {},
+				workspaceId: "ws-kendra",
+			},
+			{ apiBaseUrl: "https://platform.example/api/v1" },
+		);
+
+		expect(content.site).toEqual(DEFAULT_KENDRA_CONTENT.site);
+		expect(content.experienceGroups).toEqual(
+			DEFAULT_KENDRA_CONTENT.experienceGroups,
+		);
+	});
 });

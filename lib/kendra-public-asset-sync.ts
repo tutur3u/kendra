@@ -75,12 +75,17 @@ export type KendraPublicAssetSyncOptions = {
 
 const CONTENT_TYPES: Record<string, string> = {
 	".gif": "image/gif",
+	".flac": "audio/flac",
 	".jpg": "image/jpeg",
 	".jpeg": "image/jpeg",
+	".m4a": "audio/mp4",
 	".mp3": "audio/mpeg",
 	".mp4": "video/mp4",
+	".oga": "audio/ogg",
+	".ogg": "audio/ogg",
 	".png": "image/png",
 	".svg": "image/svg+xml",
+	".wav": "audio/wav",
 	".webp": "image/webp",
 };
 

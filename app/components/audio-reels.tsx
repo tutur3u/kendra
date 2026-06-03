@@ -7,17 +7,12 @@ import {
 	type ChangeEvent,
 	type PointerEvent,
 } from "react";
-import type { demos } from "../content";
+import type { KendraDemo } from "@/lib/kendra-content";
 import { cn, shell } from "./ui";
 
-type Demo = (typeof demos)[number];
+type AudioReel = KendraDemo;
 
-type AudioReel = Demo & {
-	audioSrc: string;
-	duration?: string;
-};
-
-function isAudioReel(demo: Demo): demo is AudioReel {
+function isAudioReel(demo: KendraDemo): demo is AudioReel {
 	return "audioSrc" in demo && Boolean(demo.audioSrc);
 }
 
@@ -277,7 +272,7 @@ function AudioReelRow({ reel }: { reel: AudioReel }) {
 	);
 }
 
-export function AudioReels({ items }: { items: Demo[] }) {
+export function AudioReels({ items }: { items: KendraDemo[] }) {
 	const audioReels = items.filter(isAudioReel);
 
 	if (audioReels.length === 0) return null;

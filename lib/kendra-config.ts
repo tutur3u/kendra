@@ -3,9 +3,7 @@ export const KENDRA_APP_NAME = "kendra";
 export type KendraAdminTargetKey =
 	| "dashboard"
 	| "library"
-	| "preview"
-	| "members"
-	| "settings";
+	| "preview";
 
 type KendraAdminTarget = {
 	actionLabel: string;
@@ -17,39 +15,25 @@ type KendraAdminTarget = {
 
 export const KENDRA_ADMIN_TARGETS: KendraAdminTarget[] = [
 	{
-		actionLabel: "Open CMS Home",
-		description: "Review workspace status and jump into the content studio.",
+		actionLabel: "Open reel desk",
+		description: "Review the reel dashboard and jump into audio management.",
 		key: "dashboard",
-		label: "CMS Home",
+		label: "Reel dashboard",
 		pathSuffix: "",
 	},
 	{
-		actionLabel: "Manage Reels",
-		description: "Edit voice reels, audio files, credits, studio specs, and booking copy.",
+		actionLabel: "Manage reels",
+		description: "Edit voice reel titles, audio files, status, duration, and script notes.",
 		key: "library",
-		label: "Library",
+		label: "Reel library",
 		pathSuffix: "/library",
 	},
 	{
-		actionLabel: "Preview Delivery",
-		description: "Inspect the delivered Kendra payload before publishing.",
+		actionLabel: "Preview reels",
+		description: "Inspect delivered audio reel data before publishing.",
 		key: "preview",
-		label: "Preview",
+		label: "Delivery preview",
 		pathSuffix: "/preview",
-	},
-	{
-		actionLabel: "Manage Members",
-		description: "Open CMS workspace membership and collaborator access.",
-		key: "members",
-		label: "Members",
-		pathSuffix: "/members",
-	},
-	{
-		actionLabel: "Open Settings",
-		description: "Tune the external project binding and workspace settings.",
-		key: "settings",
-		label: "Settings",
-		pathSuffix: "/settings",
 	},
 ];
 

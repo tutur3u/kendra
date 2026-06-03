@@ -5,26 +5,16 @@ describe("Kendra external project manifest", () => {
 	test("declares Kendra as an audio-capable external project", () => {
 		expect(kendraExternalProjectManifest.adapter).toBe("kendra");
 		expect(kendraExternalProjectManifest.schema.collections.map((collection) => collection.slug)).toEqual([
-			"profile",
 			"voice-reels",
-			"credits",
-			"studio",
-			"contact",
 		]);
 
 		const voiceReels = kendraExternalProjectManifest.schema.collections.find(
 			(collection) => collection.slug === "voice-reels",
 		);
 		expect(voiceReels?.assetTypes).toContain("audio");
-		expect(
-			kendraExternalProjectManifest.schema.collections
-				.filter((collection) => ["credits", "studio", "contact"].includes(collection.slug))
-				.map((collection) => [collection.slug, collection.assetTypes]),
-		).toEqual([
-			["credits", []],
-			["studio", []],
-			["contact", []],
-		]);
+		expect(kendraExternalProjectManifest.content.entries.every((entry) => entry.collectionSlug === "voice-reels")).toBe(
+			true,
+		);
 	});
 
 	test("seeds the local interactive reel as an audio public asset", () => {
