@@ -3,11 +3,7 @@
 import { useState } from "react";
 import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
 import { KendraAdminReelForm } from "./kendra-admin-reel-form";
-import {
-	countByStatus,
-	ReelList,
-	StatTile,
-} from "./kendra-admin-reel-panels";
+import { ReelList } from "./kendra-admin-reel-panels";
 import { cn, labelText, shell } from "./ui";
 
 type AdminTab = "audio" | "account";
@@ -34,7 +30,6 @@ export function KendraAdminClient({
 	userEmail: string | null;
 }) {
 	const [activeTab, setActiveTab] = useState<AdminTab>("audio");
-	const [accountOpen, setAccountOpen] = useState(false);
 	const [reels, setReels] = useState(initialReels);
 	const [selectedId, setSelectedId] = useState<string | null>(
 		initialReels[0]?.id ?? null,
@@ -42,73 +37,13 @@ export function KendraAdminClient({
 	const selectedReel = selectedId
 		? reels.find((reel) => reel.id === selectedId) ?? null
 		: null;
-	const publishedCount = countByStatus(reels, "published");
-	const readyAudioFiles = reels.filter((reel) => reel.audioUrl).length;
 
 	return (
 		<main className="min-h-screen bg-surface">
 			<section className={cn(shell, "grid gap-8 py-[clamp(32px,6vw,72px)]")}>
-				<header className="flex flex-col gap-6 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
-					<div className="max-w-3xl">
-						<span className={labelText}>Kendra admin</span>
-						<h1 className="mt-3 text-balance font-serif text-[clamp(3rem,8vw,7rem)] italic leading-[0.86] tracking-tight text-ink">
-							Audio reels, edited in one place.
-						</h1>
-						<p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-soft md:text-lg">
-							Create reels, replace audio files, manage public status, and remove outdated demos from a focused workspace.
-						</p>
-					</div>
-
-					<div className="relative self-start lg:self-end">
-						<button
-							aria-expanded={accountOpen}
-							aria-haspopup="menu"
-							className="flex min-h-12 items-center gap-3 border border-line bg-white px-3 py-2 text-left shadow-[0_16px_44px_rgba(10,10,10,0.08)] transition hover:border-accent"
-							onClick={() => setAccountOpen((value) => !value)}
-							type="button"
-						>
-							<span className="grid size-8 place-items-center bg-ink text-[0.72rem] font-bold text-white">
-								{getInitials(userEmail)}
-							</span>
-							<span className="grid min-w-0">
-								<span className="max-w-52 truncate text-sm font-semibold text-ink">
-									{userEmail ?? "Kendra admin"}
-								</span>
-								<span className="text-ink-soft text-xs">Account</span>
-							</span>
-						</button>
-						<div
-							className={cn(
-								"absolute right-0 top-14 z-20 grid min-w-56 gap-1 border border-line bg-white p-2 shadow-[0_22px_70px_rgba(10,10,10,0.14)] transition",
-								accountOpen
-									? "translate-y-0 opacity-100"
-									: "pointer-events-none -translate-y-1 opacity-0",
-							)}
-							role="menu"
-						>
-							<a
-								className="px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface hover:text-accent"
-								href="/voice-over#reels"
-								role="menuitem"
-							>
-								View public reels
-							</a>
-							<a
-								className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent"
-								href="/admin/logout"
-								role="menuitem"
-							>
-								Sign out
-							</a>
-						</div>
-					</div>
+				<header className="border-b border-line pb-6">
+					<h1 className="text-3xl font-semibold text-ink">Admin Dashboard</h1>
 				</header>
-
-				<div className="grid gap-3 sm:grid-cols-3">
-					<StatTile label="Audio reels" value={reels.length} />
-					<StatTile label="Published" value={publishedCount} />
-					<StatTile label="Audio ready" value={readyAudioFiles} />
-				</div>
 
 				<nav className="flex flex-wrap gap-2 border-b border-line" aria-label="Admin sections">
 					{tabs.map((tab) => (
@@ -163,7 +98,7 @@ export function KendraAdminClient({
 								</span>
 								<div className="min-w-0">
 									<div className="truncate font-semibold text-ink">
-										{userEmail ?? "Kendra admin session"}
+										{userEmail ?? "Admin session"}
 									</div>
 									<div className="text-ink-soft text-sm">
 										Can manage audio reels and public delivery.
