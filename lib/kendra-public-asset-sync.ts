@@ -11,6 +11,13 @@ import type { ExternalProjectsClient } from "tuturuuu/external-projects";
 type SyncManifest = Parameters<ExternalProjectsClient["applySyncManifest"]>[1];
 
 type UploadUrlClient = Pick<ExternalProjectsClient, "createAssetUploadUrl">;
+type SignedAssetUploadUrl = Awaited<
+	ReturnType<ExternalProjectsClient["createAssetUploadUrl"]>
+> & {
+	contentType?: string | null;
+	headers?: Record<string, string> | null;
+	token?: string | null;
+};
 
 export type KendraPublicAssetPlanItem = {
 	collectionSlug: string;
@@ -309,30 +316,46 @@ async function uploadAsset({
 	upsert: boolean;
 	workspaceId: string;
 }) {
-	const uploadUrl = await client.createAssetUploadUrl(workspaceId, {
+	const uploadUrl = (await client.createAssetUploadUrl(workspaceId, {
 		collectionType: descriptor.collectionSlug,
+		contentType: source.contentType,
 		entrySlug: descriptor.entrySlug,
 		filename: descriptor.filename,
+		size: source.bytes,
 		upsert,
-	});
+	} as Parameters<ExternalProjectsClient["createAssetUploadUrl"]>[1] & {
+		contentType: string;
+		size: number;
+	})) as SignedAssetUploadUrl;
 	const body = toArrayBuffer(source.value);
+	const headers: Record<string, string> = {
+		...(uploadUrl.headers ?? {}),
+	};
+
+	if (!headers["Content-Type"]) {
+		headers["Content-Type"] =
+			uploadUrl.contentType || source.contentType || "application/octet-stream";
+	}
+
+	if (uploadUrl.token) {
+		headers.Authorization = `Bearer ${uploadUrl.token}`;
+	}
+
 	let uploadResponse = await fetchImpl(uploadUrl.signedUrl, {
 		body,
 		cache: "no-store",
-		headers: {
-			Authorization: `Bearer ${uploadUrl.token}`,
-			"Content-Type": source.contentType,
-		},
+		headers,
 		method: "PUT",
 	});
 
 	if (!uploadResponse.ok) {
+		const fallbackHeaders = { ...headers };
+		delete fallbackHeaders["Content-Type"];
+
 		uploadResponse = await fetchImpl(uploadUrl.signedUrl, {
 			body,
 			cache: "no-store",
-			headers: {
-				Authorization: `Bearer ${uploadUrl.token}`,
-			},
+			headers: fallbackHeaders,
 			method: "PUT",
 		});
 	}

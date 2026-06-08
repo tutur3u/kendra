@@ -127,8 +127,10 @@ describe("uploadKendraPublicManifestAssets", () => {
 		expect(calls).toEqual([
 			{
 				collectionType: "profile",
+				contentType: "image/png",
 				entrySlug: "profile",
 				filename: "featured.png",
+				size: onePixelPng.byteLength,
 				upsert: true,
 			},
 		]);
