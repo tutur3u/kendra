@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { KendraAdminClient } from "../components/kendra-admin-client";
-import {
-	getKendraAdminLoginPath,
-	resolveKendraAdminTargetKey,
-} from "@/lib/kendra-config";
+import { KendraAdminLoginPanel } from "../components/kendra-admin-login-panel";
+import { getKendraCentralizedLoginHref } from "./login-link";
+import { resolveKendraAdminTargetKey } from "@/lib/kendra-config";
 import {
 	getKendraAdminSession,
 	getKendraAdminStudio,
@@ -39,7 +37,11 @@ export default async function AdminPage({
 	const session = await getKendraAdminSession();
 
 	if (!session) {
-		redirect(getKendraAdminLoginPath(targetKey));
+		return (
+			<KendraAdminLoginPanel
+				loginHref={await getKendraCentralizedLoginHref(targetKey)}
+			/>
+		);
 	}
 
 	const [studio, storageAnalytics] = await Promise.all([
