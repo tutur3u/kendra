@@ -66,7 +66,7 @@ describe("Kendra storage analytics", () => {
 		});
 		expect(calls).toHaveLength(1);
 		expect(calls[0]?.url).toBe(
-			"https://platform.example.com/api/v1/workspaces/ws-linked/storage/analytics",
+			"https://platform.example.com/api/v1/workspaces/ws-linked/external-projects/storage-analytics",
 		);
 		expect(calls[0]?.init).toMatchObject({
 			cache: "no-store",

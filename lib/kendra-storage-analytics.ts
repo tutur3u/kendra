@@ -44,7 +44,9 @@ export async function getKendraStorageAnalytics(
 		const apiBaseUrl = getKendraApiBaseUrl().replace(/\/+$/, "");
 		const workspaceId = getKendraWorkspaceId();
 		const response = await fetch(
-			`${apiBaseUrl}/workspaces/${encodeURIComponent(workspaceId)}/storage/analytics`,
+			`${apiBaseUrl}/workspaces/${encodeURIComponent(
+				workspaceId,
+			)}/external-projects/storage-analytics`,
 			{
 				cache: "no-store",
 				headers: {
