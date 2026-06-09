@@ -252,12 +252,12 @@ async function publishForStatus(
 	status: KendraAdminReelStatus,
 	previousStatus?: KendraAdminReelStatus,
 ) {
-	if (status === "published") {
+	if (status === "published" && previousStatus !== "published") {
 		await client.publishEntry(workspaceId, entryId, "publish");
 		return;
 	}
 
-	if (previousStatus === "published") {
+	if (status !== "published" && previousStatus === "published") {
 		await client.publishEntry(workspaceId, entryId, "unpublish");
 	}
 }

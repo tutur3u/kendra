@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { SiteFooter } from "./components/site-footer";
 import { SiteHeader } from "./components/site-header";
@@ -37,6 +38,7 @@ export default function RootLayout({
 					{children}
 					<SiteFooter />
 				</SmoothScroll>
+				<Toaster richColors position="bottom-right" />
 				<Analytics />
 			</body>
 		</html>

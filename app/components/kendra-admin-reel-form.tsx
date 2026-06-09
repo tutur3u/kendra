@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import type {
 	KendraAdminReel,
 	KendraAdminReelStatus,
@@ -74,6 +75,12 @@ function readPayloadError(payload: ReelMutationResponse, fallback: string) {
 	return payload.error ?? Object.values(payload.errors ?? {})[0] ?? fallback;
 }
 
+function draftsMatch(left: ReelDraft, right: ReelDraft) {
+	return (Object.keys(left) as Array<keyof ReelDraft>).every(
+		(key) => left[key] === right[key],
+	);
+}
+
 export function KendraAdminReelForm({
 	onDeleted,
 	onSaved,
@@ -84,15 +91,28 @@ export function KendraAdminReelForm({
 	reel: KendraAdminReel | null;
 }) {
 	const [draft, setDraft] = useState(() => draftFromReel(reel));
+	const [savedDraft, setSavedDraft] = useState(() => draftFromReel(reel));
 	const [slugTouched, setSlugTouched] = useState(Boolean(reel));
 	const [audioFile, setAudioFile] = useState<File | null>(null);
 	const [audioFileLabel, setAudioFileLabel] = useState("");
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-	const [message, setMessage] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 	const featuredInputId = `kendra-reel-featured-${reel?.id ?? "new"}`;
+	const hasUnsavedChanges =
+		!reel || audioFile !== null || draft.removeAudio || !draftsMatch(draft, savedDraft);
+
+	useEffect(() => {
+		const nextDraft = draftFromReel(reel);
+		setDraft(nextDraft);
+		setSavedDraft(nextDraft);
+		setSlugTouched(Boolean(reel));
+		setAudioFile(null);
+		setAudioFileLabel("");
+		setFieldErrors({});
+		setConfirmDelete(false);
+	}, [reel]);
 
 	const updateDraft = (name: keyof ReelDraft, value: string | boolean) => {
 		setDraft((current) => {
@@ -140,8 +160,9 @@ export function KendraAdminReelForm({
 
 	const submit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		if (reel && !hasUnsavedChanges) return;
+
 		setSubmitting(true);
-		setMessage(null);
 		setFieldErrors({});
 
 		const body = new FormData();
@@ -165,17 +186,19 @@ export function KendraAdminReelForm({
 
 			if (!response.ok) {
 				setFieldErrors(payload.errors ?? {});
-				setMessage(readPayloadError(payload, "We could not save this reel."));
+				toast.error(readPayloadError(payload, "We could not save this reel."));
 				return;
 			}
 
 			onSaved(payload.reels ?? [], payload.reel ?? null);
-			setMessage("Saved.");
+			toast.success("Saved.");
 			setAudioFile(null);
 			setAudioFileLabel("");
-			setDraft((current) => ({ ...current, removeAudio: false }));
+			const nextDraft = draftFromReel(payload.reel ?? reel);
+			setDraft(nextDraft);
+			setSavedDraft(nextDraft);
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "We could not save this reel.");
+			toast.error(error instanceof Error ? error.message : "We could not save this reel.");
 		} finally {
 			setSubmitting(false);
 		}
@@ -185,7 +208,6 @@ export function KendraAdminReelForm({
 		if (!reel) return;
 
 		setDeleting(true);
-		setMessage(null);
 
 		try {
 			const response = await fetch(`/api/admin/reels/${encodeURIComponent(reel.id)}`, {
@@ -194,13 +216,15 @@ export function KendraAdminReelForm({
 			const payload = (await response.json().catch(() => ({}))) as ReelMutationResponse;
 
 			if (!response.ok) {
-				setMessage(readPayloadError(payload, "We could not delete this reel."));
+				toast.error(readPayloadError(payload, "We could not delete this reel."));
 				return;
 			}
 
 			onDeleted(payload.reels ?? []);
+			setConfirmDelete(false);
+			toast.success("Deleted reel.");
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "We could not delete this reel.");
+			toast.error(error instanceof Error ? error.message : "We could not delete this reel.");
 		} finally {
 			setDeleting(false);
 		}
@@ -218,19 +242,13 @@ export function KendraAdminReelForm({
 				<div className="flex flex-wrap gap-2">
 					<button
 						className="min-h-11 border border-ink bg-ink px-5 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-						disabled={submitting || deleting}
+						disabled={submitting || deleting || (reel ? !hasUnsavedChanges : false)}
 						type="submit"
 					>
-						{submitting ? "Saving" : reel ? "Save reel" : "Create reel"}
+						{submitting ? "Saving" : reel ? "Save" : "Create reel"}
 					</button>
 				</div>
 			</div>
-
-			{message ? (
-				<div className="border border-line bg-surface px-4 py-3 text-sm text-ink-soft">
-					{message}
-				</div>
-			) : null}
 
 			<FormSection
 				defaultOpen
