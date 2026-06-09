@@ -10,6 +10,7 @@ import {
 } from "@/lib/kendra-admin-api";
 import { readKendraAdminReels } from "@/lib/kendra-admin-reel-model";
 import { getKendraStorageAnalytics } from "@/lib/kendra-storage-analytics";
+import { getKendraStorageFiles } from "@/lib/kendra-storage-files";
 
 export const dynamic = "force-dynamic";
 
@@ -44,15 +45,17 @@ export default async function AdminPage({
 		);
 	}
 
-	const [studio, storageAnalytics] = await Promise.all([
+	const [studio, storageAnalytics, storageFiles] = await Promise.all([
 		getKendraAdminStudio(session.accessToken).catch(() => emptyStudio()),
 		getKendraStorageAnalytics(session.accessToken),
+		getKendraStorageFiles(session.accessToken),
 	]);
 
 	return (
 		<KendraAdminClient
 			initialReels={readKendraAdminReels(studio)}
 			storageAnalytics={storageAnalytics}
+			storageFiles={storageFiles}
 			userEmail={session.user.email}
 		/>
 	);
