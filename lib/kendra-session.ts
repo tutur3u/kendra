@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
-import { getKendraWorkspaceId } from "./kendra-config";
+import { getKendraApiBaseUrl, getKendraWorkspaceId } from "./kendra-config";
 
 const KENDRA_SESSION_COOKIE = "kendra_admin_session";
 const SESSION_VERSION = "v1";
@@ -82,11 +82,33 @@ function unsealSession(value: string): KendraAdminSession | null {
 	}
 }
 
+function getKendraSessionValidationUrl(workspaceId: string) {
+	const apiBaseUrl = getKendraApiBaseUrl().replace(/\/+$/, "");
+	return `${apiBaseUrl}/workspaces/${encodeURIComponent(workspaceId)}/external-projects/summary`;
+}
+
+async function validateKendraSession(session: KendraAdminSession) {
+	try {
+		const response = await fetch(getKendraSessionValidationUrl(session.workspaceId), {
+			cache: "no-store",
+			headers: {
+				Accept: "application/json",
+				Authorization: `${session.tokenType} ${session.accessToken}`,
+			},
+		});
+
+		return response.ok ? session : null;
+	} catch {
+		return null;
+	}
+}
+
 export async function getKendraSessionFromCookies() {
 	const cookieStore = await cookies();
 	const value = cookieStore.get(KENDRA_SESSION_COOKIE)?.value;
+	const session = value ? unsealSession(value) : null;
 
-	return value ? unsealSession(value) : null;
+	return session ? validateKendraSession(session) : null;
 }
 
 export function setKendraSessionCookie(response: NextResponse, session: KendraAdminSession) {
