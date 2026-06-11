@@ -24,6 +24,9 @@ function mockPlatformExchange(status: 200 | 401 | 403) {
 				accessToken: "app-token",
 				app: { name: "kendra" },
 				expiresAt: new Date(Date.now() + 60_000).toISOString(),
+				refreshEarlySeconds: 900,
+				refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+				refreshToken: "refresh-token",
 				tokenType: "Bearer",
 				user: { email: "admin@example.com", id: "user-1" },
 				workspaceId: "ws-linked",
@@ -59,6 +62,10 @@ describe("Kendra app token verification", () => {
 		const response = await POST(createRequest());
 
 		expect(response.status).toBe(200);
+		await expect(response.json()).resolves.toMatchObject({
+			refreshEarlySeconds: 900,
+			valid: true,
+		});
 		expect(response.headers.get("set-cookie")).toContain("kendra_admin_session");
 		expect(calls).toHaveLength(1);
 		expect(JSON.parse(calls[0]?.init?.body as string)).toMatchObject({

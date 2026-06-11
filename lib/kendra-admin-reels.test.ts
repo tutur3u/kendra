@@ -172,15 +172,28 @@ describe("Kendra admin reel mutations", () => {
 		await updateKendraReel(client, workspaceId, entryId, createInput());
 
 		expect(client.updateEntry).toHaveBeenCalledTimes(1);
+		expect(client.updateEntry).toHaveBeenCalledWith(
+			workspaceId,
+			entryId,
+			expect.objectContaining({ status: "published" }),
+		);
 		expect(client.publishEntry).not.toHaveBeenCalled();
 	});
 
-	test("publishes when a draft reel becomes published", async () => {
+	test("saves published status without calling the downstream publish endpoint", async () => {
 		const client = createClient(createStudio({ status: "draft" }));
+		client.publishEntry = mock(async () => {
+			throw new Error("Failed to publish workspace external project entry");
+		});
 
 		await updateKendraReel(client, workspaceId, entryId, createInput());
 
-		expect(client.publishEntry).toHaveBeenCalledWith(workspaceId, entryId, "publish");
+		expect(client.updateEntry).toHaveBeenCalledWith(
+			workspaceId,
+			entryId,
+			expect.objectContaining({ status: "published" }),
+		);
+		expect(client.publishEntry).not.toHaveBeenCalled();
 	});
 
 	test("saves uploaded audio metadata without proxying the file", async () => {

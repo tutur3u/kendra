@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
 import type { KendraStorageAnalyticsState } from "@/lib/kendra-storage-analytics";
@@ -8,6 +8,10 @@ import type {
 	KendraStorageFileItem,
 	KendraStorageFilesState,
 } from "@/lib/kendra-storage-files";
+import {
+	adminFetch,
+	scheduleKendraAdminSessionRefresh,
+} from "./kendra-admin-session-client";
 import { KendraAdminReelForm } from "./kendra-admin-reel-form";
 import { ReelList } from "./kendra-admin-reel-panels";
 import { cn, labelText, shell } from "./ui";
@@ -321,8 +325,8 @@ function StoragePanel({
 			if (path) filesUrl.searchParams.set("path", path);
 
 			const [filesResponse, analyticsResponse] = await Promise.all([
-				fetch(filesUrl, { cache: "no-store" }),
-				fetch("/api/admin/storage/analytics", { cache: "no-store" }),
+				adminFetch(filesUrl, { cache: "no-store" }),
+				adminFetch("/api/admin/storage/analytics", { cache: "no-store" }),
 			]);
 			const filesPayload = (await filesResponse.json().catch(() => null)) as {
 				data?: unknown;
@@ -408,7 +412,7 @@ function StoragePanel({
 		body.set("upsert", "true");
 
 		await runStorageMutation(
-			fetch("/api/admin/storage", { body, method: "POST" }),
+			adminFetch("/api/admin/storage", { body, method: "POST" }),
 			"Uploaded.",
 		);
 		setUploadFile(null);
@@ -420,7 +424,7 @@ function StoragePanel({
 		if (!name) return;
 
 		await runStorageMutation(
-			fetch("/api/admin/storage", {
+			adminFetch("/api/admin/storage", {
 				body: JSON.stringify({ name, path: currentPath }),
 				headers: { "Content-Type": "application/json" },
 				method: "POST",
@@ -432,7 +436,7 @@ function StoragePanel({
 
 	const renameItem = (item: KendraStorageFileItem) => {
 		void runStorageMutation(
-			fetch("/api/admin/storage", {
+			adminFetch("/api/admin/storage", {
 				body: JSON.stringify({
 					kind: item.kind,
 					newName: renameValue.trim(),
@@ -448,7 +452,7 @@ function StoragePanel({
 
 	const deleteItem = (item: KendraStorageFileItem) => {
 		void runStorageMutation(
-			fetch("/api/admin/storage", {
+			adminFetch("/api/admin/storage", {
 				body: JSON.stringify({ kind: item.kind, path: item.path }),
 				headers: { "Content-Type": "application/json" },
 				method: "DELETE",
@@ -465,7 +469,7 @@ function StoragePanel({
 		try {
 			const url = new URL("/api/admin/storage", window.location.origin);
 			url.searchParams.set("filePath", item.path);
-			const response = await fetch(url, { cache: "no-store" });
+			const response = await adminFetch(url, { cache: "no-store" });
 			const payload = (await response.json().catch(() => null)) as {
 				data?: { signedUrl?: string };
 				error?: string;
@@ -672,11 +676,15 @@ function StoragePanel({
 
 export function KendraAdminClient({
 	initialReels,
+	sessionExpiresAt,
+	sessionRefreshEarlySeconds,
 	storageAnalytics,
 	storageFiles,
 	userEmail,
 }: {
 	initialReels: KendraAdminReel[];
+	sessionExpiresAt: string;
+	sessionRefreshEarlySeconds?: number;
 	storageAnalytics: KendraStorageAnalyticsState;
 	storageFiles: KendraStorageFilesState;
 	userEmail: string | null;
@@ -695,8 +703,17 @@ export function KendraAdminClient({
 		? (reels.find((reel) => reel.id === deleteTargetId) ?? null)
 		: null;
 
+	useEffect(
+		() =>
+			scheduleKendraAdminSessionRefresh({
+				expiresAt: sessionExpiresAt,
+				refreshEarlySeconds: sessionRefreshEarlySeconds,
+			}),
+		[sessionExpiresAt, sessionRefreshEarlySeconds],
+	);
+
 	const refreshReels = async () => {
-		const response = await fetch("/api/admin/reels", { cache: "no-store" });
+		const response = await adminFetch("/api/admin/reels", { cache: "no-store" });
 		const payload = (await response.json().catch(() => ({}))) as {
 			reels?: KendraAdminReel[];
 		};
@@ -730,9 +747,12 @@ export function KendraAdminClient({
 		setDeletingId(reel.id);
 
 		try {
-			const response = await fetch(`/api/admin/reels/${encodeURIComponent(reel.id)}`, {
-				method: "DELETE",
-			});
+			const response = await adminFetch(
+				`/api/admin/reels/${encodeURIComponent(reel.id)}`,
+				{
+					method: "DELETE",
+				},
+			);
 			const payload = (await response.json().catch(() => ({}))) as ReelMutationResponse;
 
 			if (!response.ok) {

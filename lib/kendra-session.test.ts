@@ -8,12 +8,17 @@ mock.module("next/headers", () => ({
 	cookies: async () => ({
 		get: (name: string) =>
 			sessionCookieValue ? { name, value: sessionCookieValue } : undefined,
+		set: (_name: string, value: string) => {
+			sessionCookieValue = value;
+		},
 	}),
 }));
 
 const originalFetch = globalThis.fetch;
 
-function createSession(): KendraAdminSession {
+function createSession(
+	overrides: Partial<KendraAdminSession> = {},
+): KendraAdminSession {
 	return {
 		accessToken: "app-token",
 		app: { name: "kendra" },
@@ -21,6 +26,7 @@ function createSession(): KendraAdminSession {
 		tokenType: "Bearer",
 		user: { email: "admin@example.com", id: "user-1" },
 		workspaceId: "ws-linked",
+		...overrides,
 	};
 }
 
@@ -33,6 +39,7 @@ function readSessionCookieValue(response: NextResponse) {
 describe("Kendra session validation", () => {
 	beforeEach(() => {
 		process.env.TUTURUUU_API_BASE_URL = "https://platform.example.com/api/v1";
+		process.env.KENDRA_APP_SECRET = "app-secret";
 		process.env.TUTURUUU_KENDRA_WORKSPACE_ID = "ws-linked";
 		process.env.KENDRA_SESSION_SECRET = "session-secret";
 		sessionCookieValue = null;
@@ -41,6 +48,7 @@ describe("Kendra session validation", () => {
 	afterEach(() => {
 		globalThis.fetch = originalFetch;
 		delete process.env.TUTURUUU_API_BASE_URL;
+		delete process.env.KENDRA_APP_SECRET;
 		delete process.env.TUTURUUU_KENDRA_WORKSPACE_ID;
 		delete process.env.KENDRA_SESSION_SECRET;
 		sessionCookieValue = null;
@@ -72,4 +80,63 @@ describe("Kendra session validation", () => {
 			});
 		});
 	}
+
+	test("refreshes stored sessions when the access token expires", async () => {
+		const { getKendraSessionFromCookies, setKendraSessionCookie } = await import(
+			"./kendra-session"
+		);
+		const response = NextResponse.json({});
+		setKendraSessionCookie(
+			response,
+			createSession({
+				expiresAt: new Date(Date.now() - 1_000).toISOString(),
+				refreshEarlySeconds: 900,
+				refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+				refreshToken: "refresh-token",
+			}),
+		);
+		sessionCookieValue = readSessionCookieValue(response);
+
+		const calls: Array<{ init?: RequestInit; input: RequestInfo | URL }> = [];
+		globalThis.fetch = (async (input, init) => {
+			calls.push({ init, input });
+
+			if (String(input).endsWith("/auth/app-token/exchange")) {
+				return Response.json({
+					accessToken: "new-app-token",
+					app: { name: "kendra" },
+					expiresAt: new Date(Date.now() + 60_000).toISOString(),
+					refreshEarlySeconds: 900,
+					refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+					refreshToken: "new-refresh-token",
+					tokenType: "Bearer",
+					user: { email: "admin@example.com", id: "user-1" },
+					workspaceId: "ws-linked",
+				});
+			}
+
+			return Response.json({ ok: true });
+		}) as typeof fetch;
+
+		const session = await getKendraSessionFromCookies();
+
+		expect(session?.accessToken).toBe("new-app-token");
+		expect(session?.refreshToken).toBe("new-refresh-token");
+		expect(calls).toHaveLength(2);
+		expect(String(calls[0]?.input)).toBe(
+			"https://platform.example.com/api/v1/auth/app-token/exchange",
+		);
+		expect(JSON.parse(calls[0]?.init?.body as string)).toMatchObject({
+			appId: "kendra",
+			appSecret: "app-secret",
+			refreshToken: "refresh-token",
+			requestedScopes: ["external-projects:*"],
+			workspaceId: "ws-linked",
+		});
+		expect(calls[1]?.init?.headers).toMatchObject({
+			Accept: "application/json",
+			Authorization: "Bearer new-app-token",
+		});
+		expect(sessionCookieValue).toBeTruthy();
+	});
 });

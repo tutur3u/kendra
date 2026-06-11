@@ -8,7 +8,6 @@ import { ensureVoiceReelCollection } from "./kendra-admin-reel-collection";
 import { getKendraWorkspaceId } from "./kendra-config";
 import {
 	type KendraAdminReel,
-	type KendraAdminReelStatus,
 	type KendraReelMutationInput,
 	readKendraAdminReels,
 } from "./kendra-admin-reel-model";
@@ -22,7 +21,6 @@ type KendraCrudClient = Pick<
 	| "deleteAsset"
 	| "deleteEntry"
 	| "getStudio"
-	| "publishEntry"
 	| "setupExternalProjectStudio"
 	| "updateAsset"
 	| "updateBlock"
@@ -200,23 +198,6 @@ async function saveScriptNotes({
 	}
 }
 
-async function publishForStatus(
-	client: KendraCrudClient,
-	workspaceId: string,
-	entryId: string,
-	status: KendraAdminReelStatus,
-	previousStatus?: KendraAdminReelStatus,
-) {
-	if (status === "published" && previousStatus !== "published") {
-		await client.publishEntry(workspaceId, entryId, "publish");
-		return;
-	}
-
-	if (status !== "published" && previousStatus === "published") {
-		await client.publishEntry(workspaceId, entryId, "unpublish");
-	}
-}
-
 async function finalizeMutation(
 	client: KendraCrudClient,
 	workspaceId: string,
@@ -293,7 +274,6 @@ export async function createKendraReel(
 			percent: 85,
 			step: "publish",
 		});
-		await publishForStatus(client, workspaceId, entryId, input.status);
 	} catch (error) {
 		if (createdEntryId) {
 			await deleteCreatedEntry(client, workspaceId, createdEntryId);
@@ -364,7 +344,6 @@ export async function updateKendraReel(
 		percent: 84,
 		step: "publish",
 	});
-	await publishForStatus(client, workspaceId, entryId, input.status, current.status);
 
 	await emitProgress(options, {
 		label: "Refreshing website data",

@@ -1,6 +1,7 @@
 "use client";
 
 import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
+import { adminFetch } from "./kendra-admin-session-client";
 import { labelText } from "./ui";
 
 export type ReelMutationResponse = {
@@ -214,7 +215,7 @@ export async function requestSignedAudioUpload({
 		step: "prepare-upload",
 	});
 
-	const response = await fetch("/api/admin/reels/audio-upload-url", {
+	const response = await adminFetch("/api/admin/reels/audio-upload-url", {
 		body: JSON.stringify({
 			contentType: file.type || null,
 			filename: file.name,

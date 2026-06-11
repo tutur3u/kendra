@@ -20,6 +20,7 @@ import {
 	type UploadedAudioMetadata,
 	uploadAudioDirectly,
 } from "./kendra-admin-reel-save-progress";
+import { adminFetch } from "./kendra-admin-session-client";
 import { labelText } from "./ui";
 
 function draftFromReel(reel: KendraAdminReel | null): ReelDraft {
@@ -178,7 +179,7 @@ export function KendraAdminReelForm({
 				step: "save-reel",
 				uploadedPath: uploadedAudio?.storagePath,
 			});
-			const response = await fetch(
+			const response = await adminFetch(
 				reel ? `/api/admin/reels/${encodeURIComponent(reel.id)}` : "/api/admin/reels",
 				{
 					body,

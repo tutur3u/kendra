@@ -5,27 +5,13 @@ import {
 	getKendraWorkspaceId,
 } from "@/lib/kendra-config";
 import {
+	createKendraSessionFromExchangePayload,
 	setKendraSessionCookie,
-	type KendraAdminSession,
+	type KendraAppTokenExchangeResponse,
 } from "@/lib/kendra-session";
 import { type NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-
-type AppTokenExchangeResponse = {
-	accessToken?: string;
-	app?: {
-		name?: string;
-	};
-	error?: string;
-	expiresAt?: string;
-	tokenType?: string;
-	workspaceId?: string | null;
-	user?: {
-		email?: string | null;
-		id?: string;
-	};
-};
 
 class TokenExchangeError extends Error {
 	constructor(
@@ -42,7 +28,9 @@ function normalizeApiBaseUrl() {
 
 async function readExchangeError(response: Response) {
 	const fallback = `Tuturuuu app token exchange failed with status ${response.status}`;
-	const payload = (await response.json().catch(() => null)) as AppTokenExchangeResponse | null;
+	const payload = (await response.json().catch(() => null)) as
+		| KendraAppTokenExchangeResponse
+		| null;
 
 	return payload?.error || fallback;
 }
@@ -68,27 +56,7 @@ async function exchangeCrossAppToken(token: string) {
 		throw new TokenExchangeError(await readExchangeError(response), response.status);
 	}
 
-	return (await response.json()) as AppTokenExchangeResponse;
-}
-
-function toKendraSession(payload: AppTokenExchangeResponse): KendraAdminSession {
-	if (!payload.accessToken || !payload.expiresAt || !payload.user?.id || !payload.workspaceId) {
-		throw new Error("Invalid Tuturuuu app token exchange response.");
-	}
-
-	return {
-		accessToken: payload.accessToken,
-		app: {
-			name: payload.app?.name ?? getKendraAppId(),
-		},
-		expiresAt: payload.expiresAt,
-		tokenType: "Bearer",
-		workspaceId: payload.workspaceId,
-		user: {
-			email: payload.user.email ?? null,
-			id: payload.user.id,
-		},
-	};
+	return (await response.json()) as KendraAppTokenExchangeResponse;
 }
 
 export async function POST(request: NextRequest) {
@@ -100,9 +68,12 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Missing required parameter: token" }, { status: 400 });
 		}
 
-		const session = toKendraSession(await exchangeCrossAppToken(token));
+		const session = createKendraSessionFromExchangePayload(
+			await exchangeCrossAppToken(token),
+		);
 		const response = NextResponse.json({
 			expiresAt: session.expiresAt,
+			refreshEarlySeconds: session.refreshEarlySeconds,
 			userId: session.user.id,
 			valid: true,
 		});

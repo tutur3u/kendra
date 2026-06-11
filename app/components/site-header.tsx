@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navigation, site } from "../content";
+import { adminFetch } from "./kendra-admin-session-client";
 import { cn, shell } from "./ui";
 
 function Mark() {
@@ -62,7 +63,7 @@ export function SiteHeader() {
 
 		async function loadAdminSession() {
 			try {
-				const response = await fetch("/api/admin/session");
+				const response = await adminFetch("/api/admin/session");
 				const payload = (await response.json().catch(() => null)) as AdminSessionState | null;
 
 				if (!cancelled) {

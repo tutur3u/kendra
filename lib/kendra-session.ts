@@ -1,10 +1,17 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
-import { getKendraApiBaseUrl, getKendraWorkspaceId } from "./kendra-config";
+import {
+	getKendraApiBaseUrl,
+	getKendraAppId,
+	getKendraAppSecret,
+	getKendraWorkspaceId,
+} from "./kendra-config";
 
 const KENDRA_SESSION_COOKIE = "kendra_admin_session";
 const SESSION_VERSION = "v1";
+const KENDRA_ADMIN_SCOPES = ["external-projects:*"] as const;
+const DEFAULT_REFRESH_EARLY_SECONDS = 300;
 
 export type KendraAdminSession = {
 	accessToken: string;
@@ -12,11 +19,32 @@ export type KendraAdminSession = {
 		name: string;
 	};
 	expiresAt: string;
+	refreshEarlySeconds?: number;
+	refreshExpiresAt?: string;
+	refreshToken?: string;
 	tokenType: "Bearer";
 	workspaceId: string;
 	user: {
 		email: string | null;
 		id: string;
+	};
+};
+
+export type KendraAppTokenExchangeResponse = {
+	accessToken?: string;
+	app?: {
+		name?: string;
+	};
+	error?: string;
+	expiresAt?: string;
+	refreshEarlySeconds?: number;
+	refreshExpiresAt?: string;
+	refreshToken?: string;
+	tokenType?: string;
+	workspaceId?: string | null;
+	user?: {
+		email?: string | null;
+		id?: string;
 	};
 };
 
@@ -36,6 +64,58 @@ function encode(value: Buffer) {
 
 function decode(value: string) {
 	return Buffer.from(value, "base64url");
+}
+
+function readTimestamp(value: string | null | undefined) {
+	if (!value) return null;
+
+	const timestamp = new Date(value).getTime();
+	return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function isAccessTokenCurrent(session: Pick<KendraAdminSession, "expiresAt">) {
+	const expiresAt = readTimestamp(session.expiresAt);
+	return expiresAt !== null && expiresAt > Date.now();
+}
+
+function isRefreshTokenCurrent(session: Pick<KendraAdminSession, "refreshExpiresAt" | "refreshToken">) {
+	const expiresAt = readTimestamp(session.refreshExpiresAt);
+	return Boolean(session.refreshToken) && expiresAt !== null && expiresAt > Date.now();
+}
+
+function shouldRefreshSession(session: KendraAdminSession) {
+	if (!isRefreshTokenCurrent(session)) {
+		return false;
+	}
+
+	const expiresAt = readTimestamp(session.expiresAt);
+	if (expiresAt === null) return true;
+
+	const refreshEarlySeconds =
+		typeof session.refreshEarlySeconds === "number" &&
+		Number.isFinite(session.refreshEarlySeconds)
+			? Math.max(60, session.refreshEarlySeconds)
+			: DEFAULT_REFRESH_EARLY_SECONDS;
+
+	return expiresAt - Date.now() <= refreshEarlySeconds * 1000;
+}
+
+function getSessionCookieExpiresAt(session: KendraAdminSession) {
+	const refreshExpiresAt = readTimestamp(session.refreshExpiresAt);
+	const accessExpiresAt = readTimestamp(session.expiresAt);
+	const expiresAt = Math.max(refreshExpiresAt ?? 0, accessExpiresAt ?? 0);
+
+	return new Date(expiresAt || Date.now());
+}
+
+function getKendraSessionCookieOptions(session: KendraAdminSession) {
+	return {
+		expires: getSessionCookieExpiresAt(session),
+		httpOnly: true,
+		path: "/",
+		sameSite: "lax" as const,
+		secure: process.env.NODE_ENV === "production",
+	};
 }
 
 function sealSession(session: KendraAdminSession) {
@@ -68,7 +148,7 @@ function unsealSession(value: string): KendraAdminSession | null {
 			return null;
 		}
 
-		if (new Date(session.expiresAt).getTime() <= Date.now()) {
+		if (!isAccessTokenCurrent(session) && !isRefreshTokenCurrent(session)) {
 			return null;
 		}
 
@@ -82,9 +162,47 @@ function unsealSession(value: string): KendraAdminSession | null {
 	}
 }
 
+export function createKendraSessionFromExchangePayload(
+	payload: KendraAppTokenExchangeResponse,
+	fallback?: KendraAdminSession,
+): KendraAdminSession {
+	const workspaceId = payload.workspaceId ?? fallback?.workspaceId;
+	const userId = payload.user?.id ?? fallback?.user.id;
+
+	if (!payload.accessToken || !payload.expiresAt || !userId || !workspaceId) {
+		throw new Error("Invalid Tuturuuu app token exchange response.");
+	}
+
+	return {
+		accessToken: payload.accessToken,
+		app: {
+			name: payload.app?.name ?? fallback?.app.name ?? getKendraAppId(),
+		},
+		expiresAt: payload.expiresAt,
+		refreshEarlySeconds:
+			typeof payload.refreshEarlySeconds === "number" &&
+			Number.isFinite(payload.refreshEarlySeconds)
+				? payload.refreshEarlySeconds
+				: fallback?.refreshEarlySeconds,
+		refreshExpiresAt: payload.refreshExpiresAt ?? fallback?.refreshExpiresAt,
+		refreshToken: payload.refreshToken ?? fallback?.refreshToken,
+		tokenType: "Bearer",
+		workspaceId,
+		user: {
+			email: payload.user?.email ?? fallback?.user.email ?? null,
+			id: userId,
+		},
+	};
+}
+
 function getKendraSessionValidationUrl(workspaceId: string) {
 	const apiBaseUrl = getKendraApiBaseUrl().replace(/\/+$/, "");
 	return `${apiBaseUrl}/workspaces/${encodeURIComponent(workspaceId)}/external-projects/summary`;
+}
+
+function getKendraAppTokenExchangeUrl() {
+	const apiBaseUrl = getKendraApiBaseUrl().replace(/\/+$/, "");
+	return `${apiBaseUrl}/auth/app-token/exchange`;
 }
 
 async function validateKendraSession(session: KendraAdminSession) {
@@ -103,21 +221,136 @@ async function validateKendraSession(session: KendraAdminSession) {
 	}
 }
 
-export async function getKendraSessionFromCookies() {
+async function refreshKendraSession(session: KendraAdminSession) {
+	if (!isRefreshTokenCurrent(session)) {
+		return null;
+	}
+
+	try {
+		const response = await fetch(getKendraAppTokenExchangeUrl(), {
+			body: JSON.stringify({
+				appId: getKendraAppId(),
+				appSecret: getKendraAppSecret(),
+				refreshToken: session.refreshToken,
+				requestedScopes: [...KENDRA_ADMIN_SCOPES],
+				workspaceId: getKendraWorkspaceId(),
+			}),
+			cache: "no-store",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+		});
+
+		if (!response.ok) {
+			return null;
+		}
+
+		const payload = (await response.json().catch(() => null)) as
+			| KendraAppTokenExchangeResponse
+			| null;
+
+		if (!payload) {
+			return null;
+		}
+
+		return createKendraSessionFromExchangePayload(payload, session);
+	} catch {
+		return null;
+	}
+}
+
+async function persistKendraSessionCookie(session: KendraAdminSession) {
+	try {
+		const cookieStore = await cookies();
+		cookieStore.set(
+			KENDRA_SESSION_COOKIE,
+			sealSession(session),
+			getKendraSessionCookieOptions(session),
+		);
+	} catch {
+		// Server components cannot mutate cookies. Route handlers still refresh it.
+	}
+}
+
+async function getStoredKendraSession() {
 	const cookieStore = await cookies();
 	const value = cookieStore.get(KENDRA_SESSION_COOKIE)?.value;
-	const session = value ? unsealSession(value) : null;
+	return value ? unsealSession(value) : null;
+}
 
-	return session ? validateKendraSession(session) : null;
+export async function refreshKendraSessionFromCookies() {
+	const session = await getStoredKendraSession();
+
+	if (!session) {
+		return null;
+	}
+
+	const refreshed = await refreshKendraSession(session);
+
+	if (!refreshed) {
+		return null;
+	}
+
+	const validated = await validateKendraSession(refreshed);
+
+	if (!validated) {
+		return null;
+	}
+
+	await persistKendraSessionCookie(validated);
+	return validated;
+}
+
+export async function getKendraSessionFromCookies() {
+	const session = await getStoredKendraSession();
+
+	if (!session) {
+		return null;
+	}
+
+	if (shouldRefreshSession(session)) {
+		const refreshed = await refreshKendraSession(session);
+
+		if (refreshed) {
+			const validated = await validateKendraSession(refreshed);
+
+			if (validated) {
+				await persistKendraSessionCookie(validated);
+				return validated;
+			}
+		}
+
+		if (!isAccessTokenCurrent(session)) {
+			return null;
+		}
+	}
+
+	const validated = await validateKendraSession(session);
+
+	if (validated) {
+		return validated;
+	}
+
+	const refreshed = await refreshKendraSession(session);
+
+	if (!refreshed) {
+		return null;
+	}
+
+	const refreshedValidation = await validateKendraSession(refreshed);
+
+	if (refreshedValidation) {
+		await persistKendraSessionCookie(refreshedValidation);
+	}
+
+	return refreshedValidation;
 }
 
 export function setKendraSessionCookie(response: NextResponse, session: KendraAdminSession) {
 	response.cookies.set(KENDRA_SESSION_COOKIE, sealSession(session), {
-		expires: new Date(session.expiresAt),
-		httpOnly: true,
-		path: "/",
-		sameSite: "lax",
-		secure: process.env.NODE_ENV === "production",
+		...getKendraSessionCookieOptions(session),
 	});
 }
 

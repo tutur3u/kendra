@@ -54,6 +54,8 @@ export default async function AdminPage({
 	return (
 		<KendraAdminClient
 			initialReels={readKendraAdminReels(studio)}
+			sessionExpiresAt={session.expiresAt}
+			sessionRefreshEarlySeconds={session.refreshEarlySeconds}
 			storageAnalytics={storageAnalytics}
 			storageFiles={storageFiles}
 			userEmail={session.user.email}
