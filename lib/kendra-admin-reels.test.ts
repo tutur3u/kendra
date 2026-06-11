@@ -6,7 +6,7 @@ mock.module("next/cache", () => ({
 	revalidatePath: () => undefined,
 }));
 
-const { updateKendraReel } = await import("./kendra-admin-reels");
+const { createKendraReel, updateKendraReel } = await import("./kendra-admin-reels");
 
 const workspaceId = "workspace-1";
 const entryId = "entry-1";
@@ -34,9 +34,11 @@ function createInput(
 
 function createStudio({
 	audioAsset = false,
+	id = entryId,
 	status,
 }: {
 	audioAsset?: boolean;
+	id?: string;
 	status: "draft" | "published";
 }): KendraAdminStudioPayload {
 	return {
@@ -44,7 +46,7 @@ function createStudio({
 			? [
 					{
 						asset_type: "audio",
-						entry_id: entryId,
+						entry_id: id,
 						id: "asset-1",
 						metadata: {
 							filename: "old.mp3",
@@ -64,7 +66,7 @@ function createStudio({
 		entries: [
 			{
 				collection_id: "collection-1",
-				id: entryId,
+				id,
 				profile_data: {
 					category: "Interactive",
 					downloadLabel: "Download MP3",
@@ -102,6 +104,65 @@ function createClient(studio: KendraAdminStudioPayload) {
 }
 
 describe("Kendra admin reel mutations", () => {
+	test("creates reels without re-running setup when the collection already exists", async () => {
+		const createdEntryId = "entry-created";
+		const initialStudio = createStudio({ status: "draft" });
+		const createdStudio = createStudio({ id: createdEntryId, status: "draft" });
+		initialStudio.entries = [];
+		let getStudioCalls = 0;
+		const client = createClient(initialStudio);
+		client.createEntry = mock(async () => ({ id: createdEntryId }));
+		client.getStudio = mock(async () => {
+			getStudioCalls += 1;
+			return getStudioCalls === 1 ? initialStudio : createdStudio;
+		});
+
+		const result = await createKendraReel(
+			client,
+			workspaceId,
+			createInput({ status: "draft" }),
+		);
+
+		expect(client.setupExternalProjectStudio).not.toHaveBeenCalled();
+		expect(client.createEntry).toHaveBeenCalledWith(
+			workspaceId,
+			expect.objectContaining({
+				collection_id: "collection-1",
+				slug: "interactive",
+			}),
+		);
+		expect(result.reel?.id).toBe(createdEntryId);
+	});
+
+	test("cleans up a created reel when audio upload fails", async () => {
+		const createdEntryId = "entry-created";
+		const initialStudio = createStudio({ status: "draft" });
+		const createdStudio = createStudio({ id: createdEntryId, status: "draft" });
+		const audioFile = new File(["audio"], "new.mp3", { type: "audio/mpeg" });
+		const uploadError = new Error("Failed to upload file (413): Too large");
+		initialStudio.entries = [];
+		let getStudioCalls = 0;
+		const client = createClient(initialStudio);
+		client.createEntry = mock(async () => ({ id: createdEntryId }));
+		client.getStudio = mock(async () => {
+			getStudioCalls += 1;
+			return getStudioCalls === 1 ? initialStudio : createdStudio;
+		});
+		client.uploadAssetFile = mock(async () => {
+			throw uploadError;
+		});
+
+		await expect(
+			createKendraReel(
+				client,
+				workspaceId,
+				createInput({ audioFile, status: "draft" }),
+			),
+		).rejects.toThrow(uploadError.message);
+
+		expect(client.deleteEntry).toHaveBeenCalledWith(workspaceId, createdEntryId);
+	});
+
 	test("does not republish an already published reel", async () => {
 		const client = createClient(createStudio({ status: "published" }));
 

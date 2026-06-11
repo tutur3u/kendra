@@ -128,12 +128,19 @@ function buildAssetPayload({
 }
 
 async function ensureVoiceReelCollection(client: KendraCrudClient, workspaceId: string) {
+	let studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
+	let collection = getVoiceReelCollection(studio);
+
+	if (collection) {
+		return { collection, studio };
+	}
+
 	await client.setupExternalProjectStudio(workspaceId, {
 		manifest: kendraExternalProjectManifest as unknown as SdkManifest,
 	});
 
-	let studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
-	let collection = getVoiceReelCollection(studio);
+	studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
+	collection = getVoiceReelCollection(studio);
 
 	if (!collection) {
 		const schema = kendraExternalProjectManifest.schema.collections[0]!;
@@ -153,6 +160,14 @@ async function ensureVoiceReelCollection(client: KendraCrudClient, workspaceId: 
 	}
 
 	return { collection, studio };
+}
+
+async function deleteCreatedEntry(
+	client: KendraCrudClient,
+	workspaceId: string,
+	entryId: string,
+) {
+	await client.deleteEntry(workspaceId, entryId).catch(() => undefined);
 }
 
 function findReelById(studio: KendraAdminStudioPayload, entryId: string) {
@@ -287,7 +302,8 @@ export async function createKendraReel(
 		workspaceId,
 		buildEntryPayload(String(collection.id), input),
 	);
-	let entryId = readCreatedEntryId(created);
+	const createdEntryId = readCreatedEntryId(created);
+	let entryId = createdEntryId;
 	let studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
 
 	if (!entryId) {
@@ -299,9 +315,16 @@ export async function createKendraReel(
 	}
 
 	const reel = findReelById(studio, entryId);
-	await saveAudioAsset({ client, entryId, input, reel, workspaceId });
-	await saveScriptNotes({ client, entryId, input, reel, workspaceId });
-	await publishForStatus(client, workspaceId, entryId, input.status);
+	try {
+		await saveAudioAsset({ client, entryId, input, reel, workspaceId });
+		await saveScriptNotes({ client, entryId, input, reel, workspaceId });
+		await publishForStatus(client, workspaceId, entryId, input.status);
+	} catch (error) {
+		if (createdEntryId) {
+			await deleteCreatedEntry(client, workspaceId, createdEntryId);
+		}
+		throw error;
+	}
 
 	studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
 	return {

@@ -1,12 +1,9 @@
 import { getKendraAdminSession } from "@/lib/kendra-admin-api";
 import { refreshKendraReels } from "@/lib/kendra-admin-reels";
+import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-
-function readErrorMessage(error: unknown) {
-	return error instanceof Error ? error.message : "Reel refresh failed";
-}
 
 export async function POST() {
 	const session = await getKendraAdminSession();
@@ -20,6 +17,6 @@ export async function POST() {
 			reels: await refreshKendraReels(session.accessToken),
 		});
 	} catch (error) {
-		return NextResponse.json({ error: readErrorMessage(error) }, { status: 500 });
+		return createKendraAdminErrorResponse(error, "Reel refresh failed");
 	}
 }

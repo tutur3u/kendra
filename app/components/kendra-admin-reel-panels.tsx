@@ -36,12 +36,18 @@ export function StatTile({ label, value }: { label: string; value: number | stri
 }
 
 export function ReelList({
+	deletingId,
+	deleteTargetId,
 	onNew,
+	onRequestDelete,
 	onSelect,
 	reels,
 	selectedId,
 }: {
+	deletingId?: string | null;
+	deleteTargetId?: string | null;
 	onNew: () => void;
+	onRequestDelete: (reel: KendraAdminReel) => void;
 	onSelect: (id: string) => void;
 	reels: KendraAdminReel[];
 	selectedId: string | null;
@@ -72,43 +78,58 @@ export function ReelList({
 			{reels.length > 0 ? (
 				<div className="grid gap-2">
 					{reels.map((reel) => (
-						<button
+						<div
 							className={cn(
-								"grid gap-3 border p-4 text-left transition",
+								"grid gap-3 border bg-white p-4 transition",
 								selectedId === reel.id
-									? "border-ink bg-white shadow-[0_18px_46px_rgba(10,10,10,0.08)]"
-									: "border-line bg-white hover:border-accent",
+									? "border-ink shadow-[0_18px_46px_rgba(10,10,10,0.08)]"
+									: "border-line hover:border-accent",
+								deleteTargetId === reel.id ? "border-coral/60 bg-coral/5" : "",
 							)}
 							key={reel.id}
-							onClick={() => onSelect(reel.id)}
-							type="button"
 						>
-							<div className="flex flex-wrap items-center gap-2">
-								<span
-									className={cn(
-										"border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em]",
-										statusClass(reel.status),
-									)}
-								>
-									{formatStatus(reel.status)}
-								</span>
-								{reel.featured ? (
-									<span className="border border-accent/25 bg-accent/10 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-accent">
-										Featured
+							<button
+								className="grid gap-3 text-left"
+								onClick={() => onSelect(reel.id)}
+								type="button"
+							>
+								<div className="flex flex-wrap items-center gap-2">
+									<span
+										className={cn(
+											"border px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em]",
+											statusClass(reel.status),
+										)}
+									>
+										{formatStatus(reel.status)}
 									</span>
-								) : null}
-							</div>
-							<div>
-								<strong className="block text-base text-ink">{reel.title}</strong>
-								<span className="mt-1 block text-ink-soft text-sm">
-									{reel.category}
-									{reel.duration ? ` / ${reel.duration}` : ""}
+									{reel.featured ? (
+										<span className="border border-accent/25 bg-accent/10 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-accent">
+											Featured
+										</span>
+									) : null}
+								</div>
+								<div>
+									<strong className="block text-base text-ink">{reel.title}</strong>
+									<span className="mt-1 block text-ink-soft text-sm">
+										{reel.category}
+										{reel.duration ? ` / ${reel.duration}` : ""}
+									</span>
+								</div>
+								<span className="text-ink-soft text-xs">
+									{reel.audioUrl ? "Audio ready" : "Audio missing"}
 								</span>
+							</button>
+							<div className="flex justify-end border-line border-t pt-3">
+								<button
+									className="min-h-9 border border-coral/30 bg-white px-3 text-coral text-xs font-bold uppercase tracking-[0.12em] transition hover:border-coral disabled:cursor-not-allowed disabled:opacity-50"
+									disabled={Boolean(deletingId)}
+									onClick={() => onRequestDelete(reel)}
+									type="button"
+								>
+									{deletingId === reel.id ? "Deleting" : "Delete"}
+								</button>
 							</div>
-							<span className="text-ink-soft text-xs">
-								{reel.audioUrl ? "Audio ready" : "Audio missing"}
-							</span>
-						</button>
+						</div>
 					))}
 				</div>
 			) : (

@@ -82,11 +82,13 @@ function draftsMatch(left: ReelDraft, right: ReelDraft) {
 }
 
 export function KendraAdminReelForm({
-	onDeleted,
+	deletePending,
+	onDeleteRequest,
 	onSaved,
 	reel,
 }: {
-	onDeleted: (reels: KendraAdminReel[]) => void;
+	deletePending?: boolean;
+	onDeleteRequest: (reel: KendraAdminReel) => void;
 	onSaved: (reels: KendraAdminReel[], reel: KendraAdminReel | null) => void;
 	reel: KendraAdminReel | null;
 }) {
@@ -95,10 +97,8 @@ export function KendraAdminReelForm({
 	const [slugTouched, setSlugTouched] = useState(Boolean(reel));
 	const [audioFile, setAudioFile] = useState<File | null>(null);
 	const [audioFileLabel, setAudioFileLabel] = useState("");
-	const [confirmDelete, setConfirmDelete] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 	const [submitting, setSubmitting] = useState(false);
-	const [deleting, setDeleting] = useState(false);
 	const featuredInputId = `kendra-reel-featured-${reel?.id ?? "new"}`;
 	const hasUnsavedChanges =
 		!reel || audioFile !== null || draft.removeAudio || !draftsMatch(draft, savedDraft);
@@ -111,7 +111,6 @@ export function KendraAdminReelForm({
 		setAudioFile(null);
 		setAudioFileLabel("");
 		setFieldErrors({});
-		setConfirmDelete(false);
 	}, [reel]);
 
 	const updateDraft = (name: keyof ReelDraft, value: string | boolean) => {
@@ -204,32 +203,6 @@ export function KendraAdminReelForm({
 		}
 	};
 
-	const deleteReel = async () => {
-		if (!reel) return;
-
-		setDeleting(true);
-
-		try {
-			const response = await fetch(`/api/admin/reels/${encodeURIComponent(reel.id)}`, {
-				method: "DELETE",
-			});
-			const payload = (await response.json().catch(() => ({}))) as ReelMutationResponse;
-
-			if (!response.ok) {
-				toast.error(readPayloadError(payload, "We could not delete this reel."));
-				return;
-			}
-
-			onDeleted(payload.reels ?? []);
-			setConfirmDelete(false);
-			toast.success("Deleted reel.");
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "We could not delete this reel.");
-		} finally {
-			setDeleting(false);
-		}
-	};
-
 	return (
 		<form className="grid gap-5" onSubmit={submit}>
 			<div className="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
@@ -240,9 +213,19 @@ export function KendraAdminReelForm({
 					</h2>
 				</div>
 				<div className="flex flex-wrap gap-2">
+					{reel ? (
+						<button
+							className="min-h-11 border border-coral/40 bg-white px-5 text-coral text-sm font-bold uppercase tracking-[0.1em] transition hover:border-coral disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={submitting || deletePending}
+							onClick={() => onDeleteRequest(reel)}
+							type="button"
+						>
+							{deletePending ? "Deleting" : "Delete"}
+						</button>
+					) : null}
 					<button
 						className="min-h-11 border border-ink bg-ink px-5 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-						disabled={submitting || deleting || (reel ? !hasUnsavedChanges : false)}
+						disabled={submitting || deletePending || (reel ? !hasUnsavedChanges : false)}
 						type="submit"
 					>
 						{submitting ? "Saving" : reel ? "Save" : "Create reel"}
@@ -373,45 +356,6 @@ export function KendraAdminReelForm({
 					/>
 				</div>
 			</FormSection>
-
-			{reel ? (
-				<div className="border-t border-line pt-5">
-					{confirmDelete ? (
-						<div className="grid gap-3 border border-coral/30 bg-coral/10 p-4">
-							<p className="text-coral text-sm">
-								Delete "{reel.title}" from the reel library and public delivery.
-							</p>
-							<div className="flex flex-wrap gap-2">
-								<button
-									className="min-h-10 bg-coral px-4 text-sm font-bold uppercase tracking-[0.1em] text-white disabled:opacity-50"
-									disabled={deleting || submitting}
-									onClick={() => void deleteReel()}
-									type="button"
-								>
-									{deleting ? "Deleting" : "Delete reel"}
-								</button>
-								<button
-									className="min-h-10 border border-line bg-white px-4 text-sm font-bold uppercase tracking-[0.1em] text-ink"
-									disabled={deleting}
-									onClick={() => setConfirmDelete(false)}
-									type="button"
-								>
-									Cancel
-								</button>
-							</div>
-						</div>
-					) : (
-						<button
-							className="text-coral text-sm font-bold uppercase tracking-[0.12em] underline decoration-coral/25 underline-offset-4"
-							disabled={submitting || deleting}
-							onClick={() => setConfirmDelete(true)}
-							type="button"
-						>
-							Delete reel
-						</button>
-					)}
-				</div>
-			) : null}
 		</form>
 	);
 }

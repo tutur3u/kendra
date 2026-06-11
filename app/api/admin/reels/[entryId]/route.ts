@@ -8,13 +8,10 @@ import {
 	updateKendraReel,
 } from "@/lib/kendra-admin-reels";
 import { parseKendraReelFormData } from "@/lib/kendra-admin-reel-model";
+import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-
-function readErrorMessage(error: unknown) {
-	return error instanceof Error ? error.message : "Reel request failed";
-}
 
 export async function PATCH(
 	request: Request,
@@ -43,7 +40,7 @@ export async function PATCH(
 			),
 		);
 	} catch (error) {
-		return NextResponse.json({ error: readErrorMessage(error) }, { status: 500 });
+		return createKendraAdminErrorResponse(error, "Reel request failed");
 	}
 }
 
@@ -68,6 +65,6 @@ export async function DELETE(
 			),
 		);
 	} catch (error) {
-		return NextResponse.json({ error: readErrorMessage(error) }, { status: 500 });
+		return createKendraAdminErrorResponse(error, "Reel request failed");
 	}
 }
