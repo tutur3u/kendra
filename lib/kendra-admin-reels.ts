@@ -4,6 +4,7 @@ import {
 	revalidateKendraContent,
 	type KendraAdminStudioPayload,
 } from "./kendra-admin-api";
+import { ensureVoiceReelCollection } from "./kendra-admin-reel-collection";
 import { getKendraWorkspaceId } from "./kendra-config";
 import {
 	type KendraAdminReel,
@@ -11,10 +12,6 @@ import {
 	type KendraReelMutationInput,
 	readKendraAdminReels,
 } from "./kendra-admin-reel-model";
-import {
-	KENDRA_REEL_COLLECTION_SLUG,
-	kendraExternalProjectManifest,
-} from "./kendra-external-project-manifest";
 
 type KendraCrudClient = Pick<
 	ExternalProjectsClient,
@@ -30,7 +27,6 @@ type KendraCrudClient = Pick<
 	| "updateAsset"
 	| "updateBlock"
 	| "updateEntry"
-	| "uploadAssetFile"
 >;
 
 type MutationResult = {
@@ -38,9 +34,15 @@ type MutationResult = {
 	reels: KendraAdminReel[];
 };
 
-type SdkManifest = NonNullable<
-	Parameters<ExternalProjectsClient["setupExternalProjectStudio"]>[1]["manifest"]
->;
+export type KendraReelMutationProgress = {
+	label: string;
+	percent: number;
+	step: string;
+};
+
+type KendraReelMutationOptions = {
+	onProgress?: (progress: KendraReelMutationProgress) => Promise<void> | void;
+};
 
 function readRecord(value: unknown) {
 	return value && typeof value === "object" && !Array.isArray(value)
@@ -51,18 +53,6 @@ function readRecord(value: unknown) {
 function readString(record: Record<string, unknown>, key: string) {
 	const value = record[key];
 	return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function getVoiceReelCollection(studio: KendraAdminStudioPayload) {
-	return (
-		studio.collections.find((collection) => {
-			const record = collection as Record<string, unknown>;
-			return (
-				readString(record, "slug") === KENDRA_REEL_COLLECTION_SLUG ||
-				readString(record, "collection_type") === KENDRA_REEL_COLLECTION_SLUG
-			);
-		}) ?? null
-	);
 }
 
 function buildEntryPayload(collectionId: string, input: KendraReelMutationInput) {
@@ -99,20 +89,18 @@ function buildBlockPayload(entryId: string, input: KendraReelMutationInput) {
 function buildAssetPayload({
 	entryId,
 	input,
-	upload,
 }: {
 	entryId: string;
 	input: KendraReelMutationInput;
-	upload?: { path: string } | null;
 }) {
 	const metadata: Record<string, string | number | boolean | null> = {
 		duration: input.duration || null,
 	};
 
-	if (input.audioFile) {
-		metadata.contentType = input.audioFile.type || null;
-		metadata.filename = input.audioFile.name;
-		metadata.size = input.audioFile.size;
+	if (input.audioUpload) {
+		metadata.contentType = input.audioUpload.contentType;
+		metadata.filename = input.audioUpload.filename;
+		metadata.size = input.audioUpload.size;
 	}
 
 	return {
@@ -123,43 +111,15 @@ function buildAssetPayload({
 		metadata,
 		sort_order: 0,
 		source_url: null,
-		storage_path: upload?.path ?? null,
+		storage_path: input.audioUpload?.storagePath ?? null,
 	};
 }
 
-async function ensureVoiceReelCollection(client: KendraCrudClient, workspaceId: string) {
-	let studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
-	let collection = getVoiceReelCollection(studio);
-
-	if (collection) {
-		return { collection, studio };
-	}
-
-	await client.setupExternalProjectStudio(workspaceId, {
-		manifest: kendraExternalProjectManifest as unknown as SdkManifest,
-	});
-
-	studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
-	collection = getVoiceReelCollection(studio);
-
-	if (!collection) {
-		const schema = kendraExternalProjectManifest.schema.collections[0]!;
-		await client.createCollection(workspaceId, {
-			collection_type: schema.collection_type,
-			config: {},
-			description: schema.description ?? null,
-			slug: schema.slug,
-			title: schema.title,
-		});
-		studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
-		collection = getVoiceReelCollection(studio);
-	}
-
-	if (!collection) {
-		throw new Error("Voice reel collection is not available.");
-	}
-
-	return { collection, studio };
+async function emitProgress(
+	options: KendraReelMutationOptions | undefined,
+	progress: KendraReelMutationProgress,
+) {
+	await options?.onProgress?.(progress);
 }
 
 async function deleteCreatedEntry(
@@ -183,20 +143,6 @@ function readCreatedEntryId(response: unknown) {
 	return readString(record, "id") ?? readString(readRecord(record.entry), "id");
 }
 
-async function uploadAudioFile(
-	client: KendraCrudClient,
-	workspaceId: string,
-	input: KendraReelMutationInput,
-) {
-	if (!input.audioFile) return null;
-
-	return client.uploadAssetFile(workspaceId, input.audioFile, {
-		collectionType: KENDRA_REEL_COLLECTION_SLUG,
-		entrySlug: input.slug,
-		upsert: true,
-	});
-}
-
 async function saveAudioAsset({
 	client,
 	entryId,
@@ -210,29 +156,23 @@ async function saveAudioAsset({
 	reel: KendraAdminReel | null;
 	workspaceId: string;
 }) {
-	if (input.removeAudio && reel?.audioAssetId) {
+	if (input.removeAudio && !input.audioUpload && reel?.audioAssetId) {
 		await client.deleteAsset(workspaceId, reel.audioAssetId);
 		return;
 	}
 
-	if (!input.audioFile) {
+	if (!input.audioUpload) {
 		return;
 	}
 
-	const upload = await uploadAudioFile(client, workspaceId, input);
-	const payload = buildAssetPayload({ entryId, input, upload });
+	const payload = buildAssetPayload({ entryId, input });
 
 	if (reel?.audioAssetId) {
-		await client.updateAsset(workspaceId, reel.audioAssetId, {
-			...payload,
-			storage_path: upload?.path ?? reel.audioStoragePath,
-		});
+		await client.updateAsset(workspaceId, reel.audioAssetId, payload);
 		return;
 	}
 
-	if (upload) {
-		await client.createAsset(workspaceId, payload);
-	}
+	await client.createAsset(workspaceId, payload);
 }
 
 async function saveScriptNotes({
@@ -296,14 +236,30 @@ export async function createKendraReel(
 	client: KendraCrudClient,
 	workspaceId: string,
 	input: KendraReelMutationInput,
+	options?: KendraReelMutationOptions,
 ): Promise<MutationResult> {
+	await emitProgress(options, {
+		label: "Preparing reel library",
+		percent: 20,
+		step: "prepare-library",
+	});
 	const { collection } = await ensureVoiceReelCollection(client, workspaceId);
+	await emitProgress(options, {
+		label: "Saving reel details",
+		percent: 35,
+		step: "save-entry",
+	});
 	const created = await client.createEntry(
 		workspaceId,
 		buildEntryPayload(String(collection.id), input),
 	);
 	const createdEntryId = readCreatedEntryId(created);
 	let entryId = createdEntryId;
+	await emitProgress(options, {
+		label: "Reading saved reel",
+		percent: 50,
+		step: "read-entry",
+	});
 	let studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
 
 	if (!entryId) {
@@ -316,8 +272,27 @@ export async function createKendraReel(
 
 	const reel = findReelById(studio, entryId);
 	try {
+		await emitProgress(options, {
+			label: input.audioUpload
+				? "Saving audio link"
+				: input.removeAudio
+					? "Removing audio link"
+					: "Checking audio link",
+			percent: 65,
+			step: "save-audio",
+		});
 		await saveAudioAsset({ client, entryId, input, reel, workspaceId });
+		await emitProgress(options, {
+			label: "Saving notes",
+			percent: 75,
+			step: "save-notes",
+		});
 		await saveScriptNotes({ client, entryId, input, reel, workspaceId });
+		await emitProgress(options, {
+			label: input.status === "published" ? "Publishing reel" : "Saving visibility",
+			percent: 85,
+			step: "publish",
+		});
 		await publishForStatus(client, workspaceId, entryId, input.status);
 	} catch (error) {
 		if (createdEntryId) {
@@ -326,6 +301,11 @@ export async function createKendraReel(
 		throw error;
 	}
 
+	await emitProgress(options, {
+		label: "Refreshing website data",
+		percent: 95,
+		step: "refresh",
+	});
 	studio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
 	return {
 		reel: findReelById(studio, entryId),
@@ -338,7 +318,13 @@ export async function updateKendraReel(
 	workspaceId: string,
 	entryId: string,
 	input: KendraReelMutationInput,
+	options?: KendraReelMutationOptions,
 ): Promise<MutationResult> {
+	await emitProgress(options, {
+		label: "Preparing reel library",
+		percent: 20,
+		step: "prepare-library",
+	});
 	const { collection, studio } = await ensureVoiceReelCollection(client, workspaceId);
 	const current = findReelById(studio, entryId);
 
@@ -346,11 +332,45 @@ export async function updateKendraReel(
 		throw new Error("Reel not found.");
 	}
 
+	await emitProgress(options, {
+		label: "Saving reel details",
+		percent: 40,
+		step: "save-entry",
+	});
 	await client.updateEntry(workspaceId, entryId, buildEntryPayload(String(collection.id), input));
+	await emitProgress(options, {
+		label: input.audioUpload
+			? "Saving audio link"
+			: input.removeAudio
+				? "Removing audio link"
+				: "Checking audio link",
+		percent: 60,
+		step: "save-audio",
+	});
 	await saveAudioAsset({ client, entryId, input, reel: current, workspaceId });
+	await emitProgress(options, {
+		label: "Saving notes",
+		percent: 72,
+		step: "save-notes",
+	});
 	await saveScriptNotes({ client, entryId, input, reel: current, workspaceId });
+	await emitProgress(options, {
+		label:
+			input.status === "published" && current.status !== "published"
+				? "Publishing reel"
+				: current.status === "published" && input.status !== "published"
+					? "Unpublishing reel"
+					: "Saving visibility",
+		percent: 84,
+		step: "publish",
+	});
 	await publishForStatus(client, workspaceId, entryId, input.status, current.status);
 
+	await emitProgress(options, {
+		label: "Refreshing website data",
+		percent: 95,
+		step: "refresh",
+	});
 	return finalizeMutation(client, workspaceId, entryId);
 }
 

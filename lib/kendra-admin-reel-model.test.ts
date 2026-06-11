@@ -78,13 +78,24 @@ describe("Kendra admin reel model", () => {
 		formData.set("title", "Kendra Braun - Commercial & Character");
 		formData.set("status", "published");
 		formData.set("featured", "true");
-		formData.set("audioFile", new File(["audio"], "commercial.mp3", { type: "audio/mpeg" }));
+		formData.set(
+			"audioStoragePath",
+			"external-projects/kendra/voice-reels/commercial/commercial.mp3",
+		);
+		formData.set("audioFileName", "commercial.mp3");
+		formData.set("audioContentType", "audio/mpeg");
+		formData.set("audioSize", "5");
 
 		const result = parseKendraReelFormData(formData);
 
 		expect(result.errors).toEqual({});
 		expect(result.input).toMatchObject({
-			audioFile: expect.any(File),
+			audioUpload: {
+				contentType: "audio/mpeg",
+				filename: "commercial.mp3",
+				size: 5,
+				storagePath: "external-projects/kendra/voice-reels/commercial/commercial.mp3",
+			},
 			featured: true,
 			slug: "commercial-and-character",
 			status: "published",
@@ -100,9 +111,23 @@ describe("Kendra admin reel model", () => {
 
 		expect(result.input).toBeNull();
 		expect(result.errors).toMatchObject({
-			audioFile: "Upload an audio file.",
+			audioFile: "Audio files must be uploaded with the direct signed upload flow.",
 			title: "Add a reel title.",
 		});
+	});
+
+	test("rejects invalid uploaded audio metadata", () => {
+		const formData = new FormData();
+		formData.set("title", "Kendra Braun - Commercial");
+		formData.set("audioStoragePath", "public/commercial.mp3");
+		formData.set("audioFileName", "commercial.txt");
+		formData.set("audioContentType", "text/plain");
+		formData.set("audioSize", "5");
+
+		const result = parseKendraReelFormData(formData);
+
+		expect(result.input).toBeNull();
+		expect(result.errors.audioFile).toBe("Upload an audio file.");
 	});
 
 	test("keeps generated slugs stable", () => {

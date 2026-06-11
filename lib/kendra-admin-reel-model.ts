@@ -23,8 +23,15 @@ export type KendraAdminReel = {
 	title: string;
 };
 
+export type KendraUploadedAudio = {
+	contentType: string | null;
+	filename: string;
+	size: number | null;
+	storagePath: string;
+};
+
 export type KendraReelMutationInput = {
-	audioFile?: File | null;
+	audioUpload: KendraUploadedAudio | null;
 	category: string;
 	downloadLabel: string;
 	duration: string;
@@ -44,7 +51,7 @@ type KendraEntryRecord = Record<string, unknown>;
 type KendraAssetRecord = Record<string, unknown>;
 type KendraBlockRecord = Record<string, unknown>;
 
-const MAX_AUDIO_FILE_BYTES = 96 * 1024 * 1024;
+export const MAX_AUDIO_FILE_BYTES = 96 * 1024 * 1024;
 const VALID_REEL_STATUSES = new Set<KendraAdminReelStatus>([
 	"archived",
 	"draft",
@@ -70,6 +77,36 @@ function readBoolean(record: Record<string, unknown>, key: string) {
 function readNumber(record: Record<string, unknown>, key: string) {
 	const value = record[key];
 	return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readFormString(formData: FormData, key: string) {
+	return String(formData.get(key) ?? "").trim();
+}
+
+function readOptionalPositiveInteger(value: string) {
+	if (!value) return null;
+
+	const parsed = Number(value);
+	return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : Number.NaN;
+}
+
+export function isKendraAudioFileDescriptor({
+	contentType,
+	filename,
+}: {
+	contentType?: string | null;
+	filename: string;
+}) {
+	return (
+		Boolean(contentType?.startsWith("audio/")) ||
+		/\.(aac|aif|aiff|flac|m4a|mp3|ogg|wav|webm)$/i.test(filename)
+	);
+}
+
+export function isKendraAudioStoragePath(value: string) {
+	return /^external-projects\/kendra\/voice-reels\/[a-z0-9][a-z0-9._~/-]*$/i.test(
+		value,
+	);
 }
 
 function getEntryCollectionSlug(
@@ -198,12 +235,20 @@ export function parseKendraReelFormData(formData: FormData): {
 	errors: Record<string, string>;
 	input: KendraReelMutationInput | null;
 } {
-	const title = String(formData.get("title") ?? "").trim();
-	const slug = slugifyKendraReel(String(formData.get("slug") ?? title));
-	const rawStatus = String(formData.get("status") ?? "draft").trim();
+	const title = readFormString(formData, "title");
+	const slug = slugifyKendraReel(readFormString(formData, "slug") || title);
+	const rawStatus = readFormString(formData, "status") || "draft";
 	const status = normalizeKendraReelStatus(rawStatus);
 	const audioFile = formData.get("audioFile");
-	const file = audioFile instanceof File && audioFile.size > 0 ? audioFile : null;
+	const directFile = audioFile instanceof File && audioFile.size > 0 ? audioFile : null;
+	const audioStoragePath = readFormString(formData, "audioStoragePath");
+	const audioFileName = readFormString(formData, "audioFileName");
+	const audioContentType = readFormString(formData, "audioContentType");
+	const rawAudioSize = readFormString(formData, "audioSize");
+	const audioSize = readOptionalPositiveInteger(rawAudioSize);
+	const hasAudioUploadMetadata = Boolean(
+		audioStoragePath || audioFileName || audioContentType || rawAudioSize,
+	);
 	const errors: Record<string, string> = {};
 
 	if (!title) {
@@ -218,14 +263,30 @@ export function parseKendraReelFormData(formData: FormData): {
 		errors.status = "Choose a valid status.";
 	}
 
-	if (file) {
-		const isAudio =
-			file.type.startsWith("audio/") ||
-			/\.(aac|aif|aiff|flac|m4a|mp3|ogg|wav|webm)$/i.test(file.name);
+	if (directFile) {
+		errors.audioFile =
+			"Audio files must be uploaded with the direct signed upload flow.";
+	}
 
-		if (!isAudio) {
+	if (hasAudioUploadMetadata) {
+		if (!audioStoragePath || !isKendraAudioStoragePath(audioStoragePath)) {
+			errors.audioFile = "Audio upload did not return a valid storage path.";
+		}
+
+		if (!audioFileName) {
+			errors.audioFile = "Audio upload did not return a file name.";
+		} else if (
+			!isKendraAudioFileDescriptor({
+				contentType: audioContentType || null,
+				filename: audioFileName,
+			})
+		) {
 			errors.audioFile = "Upload an audio file.";
-		} else if (file.size > MAX_AUDIO_FILE_BYTES) {
+		}
+
+		if (Number.isNaN(audioSize)) {
+			errors.audioFile = "Audio upload did not return a valid file size.";
+		} else if (audioSize && audioSize > MAX_AUDIO_FILE_BYTES) {
 			errors.audioFile = "Audio files must stay under 96 MB.";
 		}
 	}
@@ -237,18 +298,25 @@ export function parseKendraReelFormData(formData: FormData): {
 	return {
 		errors: {},
 		input: {
-			audioFile: file,
-			category: String(formData.get("category") ?? "").trim() || "Voice reel",
-			downloadLabel: String(formData.get("downloadLabel") ?? "").trim() || "Download MP3",
-			duration: String(formData.get("duration") ?? "").trim(),
+			audioUpload: hasAudioUploadMetadata
+				? {
+						contentType: audioContentType || null,
+						filename: audioFileName,
+						size: audioSize || null,
+						storagePath: audioStoragePath,
+					}
+				: null,
+			category: readFormString(formData, "category") || "Voice reel",
+			downloadLabel: readFormString(formData, "downloadLabel") || "Download MP3",
+			duration: readFormString(formData, "duration"),
 			featured: formData.get("featured") === "true" || formData.get("featured") === "on",
 			removeAudio: formData.get("removeAudio") === "true" || formData.get("removeAudio") === "on",
-			scriptNotes: String(formData.get("scriptNotes") ?? "").trim(),
+			scriptNotes: readFormString(formData, "scriptNotes"),
 			slug,
 			status,
-			style: String(formData.get("style") ?? "").trim(),
-			subtitle: String(formData.get("subtitle") ?? "").trim() || "Audio reel",
-			summary: String(formData.get("summary") ?? "").trim(),
+			style: readFormString(formData, "style"),
+			subtitle: readFormString(formData, "subtitle") || "Audio reel",
+			summary: readFormString(formData, "summary"),
 			title,
 		},
 	};

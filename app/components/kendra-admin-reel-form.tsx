@@ -2,50 +2,25 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import type {
-	KendraAdminReel,
-	KendraAdminReelStatus,
-} from "@/lib/kendra-admin-reel-model";
+import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
 import { slugifyKendraReel } from "@/lib/kendra-admin-reel-model";
-import { KendraAdminReelAudioField } from "./kendra-admin-reel-audio-field";
 import {
-	FormSection,
-	ReadOnlyField,
-	SelectField,
-	TextAreaField,
-	TextField,
-	ToggleRow,
-} from "./kendra-admin-reel-form-fields";
+	ReelAdvancedSection,
+	ReelAudioSection,
+	ReelBasicsSection,
+	type ReelDraft,
+	ReelPublicDetailsSection,
+} from "./kendra-admin-reel-sections";
+import {
+	readMetadataSaveResponse,
+	requestSignedAudioUpload,
+	SaveProgressPanel,
+	type SaveFlowError,
+	type SaveProgressState,
+	type UploadedAudioMetadata,
+	uploadAudioDirectly,
+} from "./kendra-admin-reel-save-progress";
 import { labelText } from "./ui";
-
-type ReelDraft = {
-	category: string;
-	downloadLabel: string;
-	duration: string;
-	featured: boolean;
-	removeAudio: boolean;
-	scriptNotes: string;
-	slug: string;
-	status: KendraAdminReelStatus;
-	style: string;
-	subtitle: string;
-	summary: string;
-	title: string;
-};
-
-type ReelMutationResponse = {
-	error?: string;
-	errors?: Record<string, string>;
-	reel?: KendraAdminReel | null;
-	reels?: KendraAdminReel[];
-};
-
-const statusOptions: Array<{ label: string; value: KendraAdminReelStatus }> = [
-	{ label: "Draft", value: "draft" },
-	{ label: "Published", value: "published" },
-	{ label: "Archived", value: "archived" },
-	{ label: "Scheduled", value: "scheduled" },
-];
 
 function draftFromReel(reel: KendraAdminReel | null): ReelDraft {
 	return {
@@ -71,10 +46,6 @@ function formatAudioDuration(seconds: number) {
 	return `${minutes}:${remaining}`;
 }
 
-function readPayloadError(payload: ReelMutationResponse, fallback: string) {
-	return payload.error ?? Object.values(payload.errors ?? {})[0] ?? fallback;
-}
-
 function draftsMatch(left: ReelDraft, right: ReelDraft) {
 	return (Object.keys(left) as Array<keyof ReelDraft>).every(
 		(key) => left[key] === right[key],
@@ -98,6 +69,11 @@ export function KendraAdminReelForm({
 	const [audioFile, setAudioFile] = useState<File | null>(null);
 	const [audioFileLabel, setAudioFileLabel] = useState("");
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+	const [saveProgress, setSaveProgress] = useState<SaveProgressState>({
+		label: "",
+		percent: 0,
+		status: "idle",
+	});
 	const [submitting, setSubmitting] = useState(false);
 	const featuredInputId = `kendra-reel-featured-${reel?.id ?? "new"}`;
 	const hasUnsavedChanges =
@@ -111,6 +87,7 @@ export function KendraAdminReelForm({
 		setAudioFile(null);
 		setAudioFileLabel("");
 		setFieldErrors({});
+		setSaveProgress({ label: "", percent: 0, status: "idle" });
 	}, [reel]);
 
 	const updateDraft = (name: keyof ReelDraft, value: string | boolean) => {
@@ -163,17 +140,44 @@ export function KendraAdminReelForm({
 
 		setSubmitting(true);
 		setFieldErrors({});
+		setSaveProgress({
+			label: "Validating reel",
+			percent: 2,
+			status: "running",
+			step: "validate",
+		});
+		let uploadedAudio: UploadedAudioMetadata | null = null;
 
 		const body = new FormData();
 		for (const [key, value] of Object.entries(draft)) {
 			body.set(key, typeof value === "boolean" ? String(value) : value);
 		}
 
-		if (audioFile) {
-			body.set("audioFile", audioFile);
-		}
-
 		try {
+			if (audioFile) {
+				const upload = await requestSignedAudioUpload({
+					file: audioFile,
+					setSaveProgress,
+					slug: draft.slug,
+				});
+				uploadedAudio = await uploadAudioDirectly({
+					file: audioFile,
+					setSaveProgress,
+					upload,
+				});
+				body.set("audioStoragePath", uploadedAudio.storagePath);
+				body.set("audioFileName", uploadedAudio.filename);
+				body.set("audioContentType", uploadedAudio.contentType ?? "");
+				body.set("audioSize", String(uploadedAudio.size));
+			}
+
+			setSaveProgress({
+				label: "Saving reel",
+				percent: uploadedAudio ? 72 : 12,
+				status: "running",
+				step: "save-reel",
+				uploadedPath: uploadedAudio?.storagePath,
+			});
 			const response = await fetch(
 				reel ? `/api/admin/reels/${encodeURIComponent(reel.id)}` : "/api/admin/reels",
 				{
@@ -181,13 +185,11 @@ export function KendraAdminReelForm({
 					method: reel ? "PATCH" : "POST",
 				},
 			);
-			const payload = (await response.json().catch(() => ({}))) as ReelMutationResponse;
-
-			if (!response.ok) {
-				setFieldErrors(payload.errors ?? {});
-				toast.error(readPayloadError(payload, "We could not save this reel."));
-				return;
-			}
+			const payload = await readMetadataSaveResponse({
+				response,
+				setSaveProgress,
+				uploadedAudio,
+			});
 
 			onSaved(payload.reels ?? [], payload.reel ?? null);
 			toast.success("Saved.");
@@ -197,7 +199,21 @@ export function KendraAdminReelForm({
 			setDraft(nextDraft);
 			setSavedDraft(nextDraft);
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "We could not save this reel.");
+			const saveError = error as SaveFlowError;
+			const message =
+				saveError instanceof Error ? saveError.message : "We could not save this reel.";
+			setFieldErrors(saveError.errors ?? {});
+			setSaveProgress((current) => ({
+				details: saveError.details ?? current.details,
+				error: message,
+				label: (saveError.label ?? current.label) || "Save failed",
+				percent: Math.max(current.percent, 1),
+				status: "error",
+				statusCode: saveError.statusCode,
+				step: saveError.step ?? current.step,
+				uploadedPath: current.uploadedPath ?? uploadedAudio?.storagePath,
+			}));
+			toast.error(message);
 		} finally {
 			setSubmitting(false);
 		}
@@ -233,129 +249,35 @@ export function KendraAdminReelForm({
 				</div>
 			</div>
 
-			<FormSection
-				defaultOpen
-				description="Name the reel and decide whether visitors can see it."
-				kicker="Step 1"
-				title="Basics"
-			>
-				<div className="grid gap-4 md:grid-cols-2">
-					<TextField
-						error={fieldErrors.title}
-						label="Reel name"
-						name="title"
-						onChange={updateDraft}
-						required
-						value={draft.title}
-					/>
-					<TextField
-						label="Category"
-						name="category"
-						onChange={updateDraft}
-						value={draft.category}
-					/>
-					<SelectField
-						error={fieldErrors.status}
-						label="Website visibility"
-						name="status"
-						onChange={(_, value) =>
-							updateDraft("status", value as KendraAdminReelStatus)
-						}
-						options={statusOptions}
-						value={draft.status}
-					/>
-					<ToggleRow
-						checked={draft.featured}
-						description="Pin it near the top of the website list."
-						id={featuredInputId}
-						label="Feature this reel"
-						onChange={(checked) => updateDraft("featured", checked)}
-					/>
-				</div>
-			</FormSection>
+			<SaveProgressPanel state={saveProgress} />
 
-			<FormSection
-				defaultOpen
-				description="Upload the file. The length is detected for you."
-				kicker="Step 2"
-				title="Audio"
-			>
-				<div className="grid gap-4 md:grid-cols-[1fr_13rem]">
-					<KendraAdminReelAudioField
-						audioFileLabel={audioFileLabel}
-						audioUrl={reel?.audioUrl}
-						currentAudioLabel={reel?.audioFileName || reel?.audioStoragePath}
-						error={fieldErrors.audioFile}
-						hasCurrentAudio={Boolean(reel?.audioAssetId) && !audioFile}
-						onAudioChange={onAudioChange}
-						onRemoveAudioChange={updateRemoveAudio}
-						removeAudio={draft.removeAudio}
-					/>
-					<ReadOnlyField
-						help="This updates after you choose an audio file."
-						label="Duration"
-						placeholder="Auto"
-						value={draft.duration}
-					/>
-				</div>
-			</FormSection>
-
-			<FormSection
-				description="Add the short customer-facing copy for the website."
-				kicker="Step 3"
-				title="Public details"
-			>
-				<TextAreaField
-					label="Short description"
-					name="summary"
-					onChange={updateDraft}
-					value={draft.summary}
-				/>
-				<TextAreaField
-					label="Notes"
-					name="scriptNotes"
-					onChange={updateDraft}
-					rows={5}
-					value={draft.scriptNotes}
-				/>
-			</FormSection>
-
-			<FormSection
-				description="Only change these when a link or display label needs to be exact."
-				title="Advanced options"
-			>
-				<div className="grid gap-4 md:grid-cols-2">
-					<TextField
-						error={fieldErrors.slug}
-						label="Website link"
-						name="slug"
-						onChange={(name, value) => {
-							setSlugTouched(true);
-							updateDraft(name, slugifyKendraReel(value));
-						}}
-						required
-						value={draft.slug}
-					/>
-					<TextField
-						label="Voice style"
-						name="style"
-						onChange={updateDraft}
-						value={draft.style}
-					/>
-					<TextField
-						label="Type"
-						name="subtitle"
-						onChange={updateDraft}
-						value={draft.subtitle}
-					/>
-					<TextField
-						label="Download button text"
-						name="downloadLabel"
-						onChange={updateDraft}
-						value={draft.downloadLabel}
-					/>
-				</div>
-			</FormSection>
+			<ReelBasicsSection
+				draft={draft}
+				featuredInputId={featuredInputId}
+				fieldErrors={fieldErrors}
+				onChange={updateDraft}
+			/>
+			<ReelAudioSection
+				audioFileLabel={audioFileLabel}
+				audioUrl={reel?.audioUrl}
+				currentAudioLabel={reel?.audioFileName || reel?.audioStoragePath}
+				duration={draft.duration}
+				error={fieldErrors.audioFile}
+				hasCurrentAudio={Boolean(reel?.audioAssetId) && !audioFile}
+				onAudioChange={onAudioChange}
+				onRemoveAudioChange={updateRemoveAudio}
+				removeAudio={draft.removeAudio}
+			/>
+			<ReelPublicDetailsSection draft={draft} onChange={updateDraft} />
+			<ReelAdvancedSection
+				draft={draft}
+				fieldErrors={fieldErrors}
+				onChange={updateDraft}
+				onSlugChange={(name, value) => {
+					setSlugTouched(true);
+					updateDraft(name, slugifyKendraReel(value));
+				}}
+			/>
 		</form>
 	);
 }

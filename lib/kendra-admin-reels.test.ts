@@ -15,7 +15,7 @@ function createInput(
 	overrides: Partial<KendraReelMutationInput> = {},
 ): KendraReelMutationInput {
 	return {
-		audioFile: null,
+		audioUpload: null,
 		category: "Interactive",
 		downloadLabel: "Download MP3",
 		duration: "1:20",
@@ -96,10 +96,6 @@ function createClient(studio: KendraAdminStudioPayload) {
 		updateAsset: mock(async () => undefined),
 		updateBlock: mock(async () => undefined),
 		updateEntry: mock(async () => undefined),
-		uploadAssetFile: mock(async () => ({
-			fullPath: null,
-			path: "external-projects/kendra/voice-reels/interactive/new.mp3",
-		})),
 	};
 }
 
@@ -134,31 +130,38 @@ describe("Kendra admin reel mutations", () => {
 		expect(result.reel?.id).toBe(createdEntryId);
 	});
 
-	test("cleans up a created reel when audio upload fails", async () => {
+	test("cleans up a created reel when audio asset save fails", async () => {
 		const createdEntryId = "entry-created";
 		const initialStudio = createStudio({ status: "draft" });
 		const createdStudio = createStudio({ id: createdEntryId, status: "draft" });
-		const audioFile = new File(["audio"], "new.mp3", { type: "audio/mpeg" });
-		const uploadError = new Error("Failed to upload file (413): Too large");
+		const assetError = new Error("Failed to save audio asset");
 		initialStudio.entries = [];
 		let getStudioCalls = 0;
 		const client = createClient(initialStudio);
+		client.createAsset = mock(async () => {
+			throw assetError;
+		});
 		client.createEntry = mock(async () => ({ id: createdEntryId }));
 		client.getStudio = mock(async () => {
 			getStudioCalls += 1;
 			return getStudioCalls === 1 ? initialStudio : createdStudio;
-		});
-		client.uploadAssetFile = mock(async () => {
-			throw uploadError;
 		});
 
 		await expect(
 			createKendraReel(
 				client,
 				workspaceId,
-				createInput({ audioFile, status: "draft" }),
+				createInput({
+					audioUpload: {
+						contentType: "audio/mpeg",
+						filename: "new.mp3",
+						size: 5,
+						storagePath: "external-projects/kendra/voice-reels/interactive/new.mp3",
+					},
+					status: "draft",
+				}),
 			),
-		).rejects.toThrow(uploadError.message);
+		).rejects.toThrow(assetError.message);
 
 		expect(client.deleteEntry).toHaveBeenCalledWith(workspaceId, createdEntryId);
 	});
@@ -180,22 +183,24 @@ describe("Kendra admin reel mutations", () => {
 		expect(client.publishEntry).toHaveBeenCalledWith(workspaceId, entryId, "publish");
 	});
 
-	test("uploads audio through the signed-url helper before saving the asset", async () => {
+	test("saves uploaded audio metadata without proxying the file", async () => {
 		const client = createClient(createStudio({ audioAsset: true, status: "published" }));
-		const audioFile = new File(["audio"], "new.mp3", { type: "audio/mpeg" });
 
 		await updateKendraReel(
 			client,
 			workspaceId,
 			entryId,
-			createInput({ audioFile, duration: "0:03" }),
+			createInput({
+				audioUpload: {
+					contentType: "audio/mpeg",
+					filename: "new.mp3",
+					size: 5,
+					storagePath: "external-projects/kendra/voice-reels/interactive/new.mp3",
+				},
+				duration: "0:03",
+			}),
 		);
 
-		expect(client.uploadAssetFile).toHaveBeenCalledWith(workspaceId, audioFile, {
-			collectionType: "voice-reels",
-			entrySlug: "interactive",
-			upsert: true,
-		});
 		expect(client.updateAsset).toHaveBeenCalledWith(
 			workspaceId,
 			"asset-1",
@@ -203,10 +208,30 @@ describe("Kendra admin reel mutations", () => {
 				metadata: expect.objectContaining({
 					contentType: "audio/mpeg",
 					filename: "new.mp3",
-					size: audioFile.size,
+					size: 5,
 				}),
 				storage_path: "external-projects/kendra/voice-reels/interactive/new.mp3",
 			}),
 		);
+	});
+
+	test("reports progress while updating reel metadata", async () => {
+		const client = createClient(createStudio({ status: "draft" }));
+		const steps: string[] = [];
+
+		await updateKendraReel(client, workspaceId, entryId, createInput(), {
+			onProgress: (progress) => {
+				steps.push(progress.step);
+			},
+		});
+
+		expect(steps).toEqual([
+			"prepare-library",
+			"save-entry",
+			"save-audio",
+			"save-notes",
+			"publish",
+			"refresh",
+		]);
 	});
 });

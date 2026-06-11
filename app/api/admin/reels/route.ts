@@ -8,6 +8,7 @@ import {
 	refreshKendraReels,
 } from "@/lib/kendra-admin-reels";
 import { parseKendraReelFormData } from "@/lib/kendra-admin-reel-model";
+import { createKendraReelMutationStream } from "@/lib/kendra-admin-reel-stream";
 import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { NextResponse } from "next/server";
 
@@ -43,13 +44,14 @@ export async function POST(request: Request) {
 			return NextResponse.json({ errors }, { status: 400 });
 		}
 
-		const result = await createKendraReel(
-			createKendraExternalProjectsClient(session.accessToken),
-			getKendraWorkspaceId(),
-			input,
-		);
+		const client = createKendraExternalProjectsClient(session.accessToken);
+		const workspaceId = getKendraWorkspaceId();
 
-		return NextResponse.json(result);
+		return createKendraReelMutationStream({
+			fallback: "Reel request failed",
+			run: (onProgress) =>
+				createKendraReel(client, workspaceId, input, { onProgress }),
+		});
 	} catch (error) {
 		return createKendraAdminErrorResponse(error, "Reel request failed");
 	}
