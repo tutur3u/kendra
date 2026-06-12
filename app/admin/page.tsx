@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { KendraAdminClient } from "../components/kendra-admin-client";
 import { KendraAdminLoginPanel } from "../components/kendra-admin-login-panel";
+import { KendraAdminSessionRestorer } from "../components/kendra-admin-session-restorer";
 import { getKendraCentralizedLoginHref } from "./login-link";
 import { resolveKendraAdminTargetKey } from "@/lib/kendra-config";
 import {
-	getKendraAdminSession,
+	getKendraAdminSessionReadState,
 	getKendraAdminStudio,
 	type KendraAdminStudioPayload,
 } from "@/lib/kendra-admin-api";
@@ -35,15 +36,18 @@ export default async function AdminPage({
 }) {
 	const params = await searchParams;
 	const targetKey = resolveKendraAdminTargetKey(params.target);
-	const session = await getKendraAdminSession();
+	const loginHref = await getKendraCentralizedLoginHref(targetKey);
+	const sessionState = await getKendraAdminSessionReadState();
 
-	if (!session) {
-		return (
-			<KendraAdminLoginPanel
-				loginHref={await getKendraCentralizedLoginHref(targetKey)}
-			/>
-		);
+	if (sessionState.status === "unauthenticated") {
+		return <KendraAdminLoginPanel loginHref={loginHref} />;
 	}
+
+	if (sessionState.status === "refreshable") {
+		return <KendraAdminSessionRestorer loginHref={loginHref} />;
+	}
+
+	const { session } = sessionState;
 
 	const [studio, storageAnalytics, storageFiles] = await Promise.all([
 		getKendraAdminStudio(session.accessToken).catch(() => emptyStudio()),

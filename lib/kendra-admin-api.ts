@@ -2,7 +2,10 @@ import { revalidatePath } from "next/cache";
 import { ExternalProjectsClient } from "tuturuuu/external-projects";
 import { KendraAdminDownstreamError } from "./kendra-admin-route-errors";
 import { getKendraApiBaseUrl, getKendraWorkspaceId } from "./kendra-config";
-import { getKendraSessionFromCookies } from "./kendra-session";
+import {
+	getKendraSessionFromCookies,
+	getKendraSessionReadStateFromCookies,
+} from "./kendra-session";
 
 export type KendraSignedAssetUploadUrl = Awaited<
 	ReturnType<ExternalProjectsClient["createAssetUploadUrl"]>
@@ -133,6 +136,10 @@ export function createKendraExternalProjectsClient(accessToken: string) {
 
 export async function getKendraAdminSession() {
 	return getKendraSessionFromCookies();
+}
+
+export async function getKendraAdminSessionReadState() {
+	return getKendraSessionReadStateFromCookies();
 }
 
 export async function getKendraAdminStudio(accessToken: string) {

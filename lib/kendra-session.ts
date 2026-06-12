@@ -11,7 +11,6 @@ import {
 const KENDRA_SESSION_COOKIE = "kendra_admin_session";
 const SESSION_VERSION = "v1";
 const KENDRA_ADMIN_SCOPES = ["external-projects:*"] as const;
-const DEFAULT_REFRESH_EARLY_SECONDS = 300;
 
 export type KendraAdminSession = {
 	accessToken: string;
@@ -29,6 +28,20 @@ export type KendraAdminSession = {
 		id: string;
 	};
 };
+
+export type KendraSessionReadState =
+	| {
+			session: KendraAdminSession;
+			status: "authenticated";
+	  }
+	| {
+			session: KendraAdminSession;
+			status: "refreshable";
+	  }
+	| {
+			session: null;
+			status: "unauthenticated";
+	  };
 
 export type KendraAppTokenExchangeResponse = {
 	accessToken?: string;
@@ -81,23 +94,6 @@ function isAccessTokenCurrent(session: Pick<KendraAdminSession, "expiresAt">) {
 function isRefreshTokenCurrent(session: Pick<KendraAdminSession, "refreshExpiresAt" | "refreshToken">) {
 	const expiresAt = readTimestamp(session.refreshExpiresAt);
 	return Boolean(session.refreshToken) && expiresAt !== null && expiresAt > Date.now();
-}
-
-function shouldRefreshSession(session: KendraAdminSession) {
-	if (!isRefreshTokenCurrent(session)) {
-		return false;
-	}
-
-	const expiresAt = readTimestamp(session.expiresAt);
-	if (expiresAt === null) return true;
-
-	const refreshEarlySeconds =
-		typeof session.refreshEarlySeconds === "number" &&
-		Number.isFinite(session.refreshEarlySeconds)
-			? Math.max(60, session.refreshEarlySeconds)
-			: DEFAULT_REFRESH_EARLY_SECONDS;
-
-	return expiresAt - Date.now() <= refreshEarlySeconds * 1000;
 }
 
 function getSessionCookieExpiresAt(session: KendraAdminSession) {
@@ -261,19 +257,6 @@ async function refreshKendraSession(session: KendraAdminSession) {
 	}
 }
 
-async function persistKendraSessionCookie(session: KendraAdminSession) {
-	try {
-		const cookieStore = await cookies();
-		cookieStore.set(
-			KENDRA_SESSION_COOKIE,
-			sealSession(session),
-			getKendraSessionCookieOptions(session),
-		);
-	} catch {
-		// Server components cannot mutate cookies. Route handlers still refresh it.
-	}
-}
-
 async function getStoredKendraSession() {
 	const cookieStore = await cookies();
 	const value = cookieStore.get(KENDRA_SESSION_COOKIE)?.value;
@@ -299,53 +282,36 @@ export async function refreshKendraSessionFromCookies() {
 		return null;
 	}
 
-	await persistKendraSessionCookie(validated);
 	return validated;
 }
 
-export async function getKendraSessionFromCookies() {
+export async function getKendraSessionReadStateFromCookies(): Promise<KendraSessionReadState> {
 	const session = await getStoredKendraSession();
 
 	if (!session) {
-		return null;
+		return { session: null, status: "unauthenticated" };
 	}
 
-	if (shouldRefreshSession(session)) {
-		const refreshed = await refreshKendraSession(session);
-
-		if (refreshed) {
-			const validated = await validateKendraSession(refreshed);
-
-			if (validated) {
-				await persistKendraSessionCookie(validated);
-				return validated;
-			}
-		}
-
-		if (!isAccessTokenCurrent(session)) {
-			return null;
-		}
+	if (!isAccessTokenCurrent(session)) {
+		return isRefreshTokenCurrent(session)
+			? { session, status: "refreshable" }
+			: { session: null, status: "unauthenticated" };
 	}
 
 	const validated = await validateKendraSession(session);
 
 	if (validated) {
-		return validated;
+		return { session: validated, status: "authenticated" };
 	}
 
-	const refreshed = await refreshKendraSession(session);
+	return isRefreshTokenCurrent(session)
+		? { session, status: "refreshable" }
+		: { session: null, status: "unauthenticated" };
+}
 
-	if (!refreshed) {
-		return null;
-	}
-
-	const refreshedValidation = await validateKendraSession(refreshed);
-
-	if (refreshedValidation) {
-		await persistKendraSessionCookie(refreshedValidation);
-	}
-
-	return refreshedValidation;
+export async function getKendraSessionFromCookies() {
+	const state = await getKendraSessionReadStateFromCookies();
+	return state.status === "authenticated" ? state.session : null;
 }
 
 export function setKendraSessionCookie(response: NextResponse, session: KendraAdminSession) {

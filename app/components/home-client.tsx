@@ -164,7 +164,12 @@ export function HomeClient({ content }: { content: KendraContent }) {
 
 			</section>
 
-			<AudioReels items={demos} />
+			<AudioReels
+				items={demos}
+				limit={5}
+				viewMoreHref="/voice-over#reels"
+				viewMoreLabel="View more in voice over"
+			/>
 
 			<section className={cn(shell, "pb-[clamp(48px,8vw,96px)]")}>
 				<motion.div

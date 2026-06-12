@@ -1,12 +1,56 @@
 "use client";
 
-type RefreshSessionResponse = {
+export type RefreshSessionResponse = {
 	expiresAt?: string;
 	refreshEarlySeconds?: number;
 	valid?: boolean;
 };
 
-export async function refreshKendraAdminSession() {
+const FALLBACK_REFRESH_DELAY_MS = 5 * 60 * 1000;
+const MAX_REFRESH_LEAD_SECONDS = 30;
+const MIN_REFRESH_LEAD_SECONDS = 5;
+
+let pendingRefresh: Promise<RefreshSessionResponse | null> | null = null;
+
+export function getKendraAdminSessionRefreshLeadSeconds(
+	refreshEarlySeconds?: number | null,
+) {
+	const requested =
+		typeof refreshEarlySeconds === "number" &&
+		Number.isFinite(refreshEarlySeconds)
+			? refreshEarlySeconds
+			: MAX_REFRESH_LEAD_SECONDS;
+
+	return Math.min(
+		MAX_REFRESH_LEAD_SECONDS,
+		Math.max(MIN_REFRESH_LEAD_SECONDS, requested),
+	);
+}
+
+export function getKendraAdminSessionRefreshDelayMs({
+	expiresAt,
+	now = Date.now(),
+	refreshEarlySeconds,
+}: {
+	expiresAt: string;
+	now?: number;
+	refreshEarlySeconds?: number | null;
+}) {
+	const expiresAtMs = new Date(expiresAt).getTime();
+
+	if (!Number.isFinite(expiresAtMs)) {
+		return FALLBACK_REFRESH_DELAY_MS;
+	}
+
+	return Math.max(
+		0,
+		expiresAtMs -
+			now -
+			getKendraAdminSessionRefreshLeadSeconds(refreshEarlySeconds) * 1000,
+	);
+}
+
+async function requestKendraAdminSessionRefresh() {
 	try {
 		const response = await fetch("/api/auth/session/refresh", {
 			cache: "no-store",
@@ -21,6 +65,16 @@ export async function refreshKendraAdminSession() {
 	} catch {
 		return null;
 	}
+}
+
+export function refreshKendraAdminSession() {
+	if (!pendingRefresh) {
+		pendingRefresh = requestKendraAdminSessionRefresh().finally(() => {
+			pendingRefresh = null;
+		});
+	}
+
+	return pendingRefresh;
 }
 
 export async function adminFetch(input: RequestInfo | URL, init: RequestInit = {}) {
@@ -55,41 +109,75 @@ export function scheduleKendraAdminSessionRefresh({
 	refreshEarlySeconds?: number | null;
 }) {
 	let cancelled = false;
+	let currentExpiresAt = expiresAt;
 	let timeout: ReturnType<typeof setTimeout> | null = null;
-	const earlySeconds =
-		typeof refreshEarlySeconds === "number" && Number.isFinite(refreshEarlySeconds)
-			? Math.max(60, refreshEarlySeconds)
-			: 300;
 
 	const schedule = (nextExpiresAt: string) => {
 		if (cancelled) return;
 		if (timeout) clearTimeout(timeout);
 
-		const expiresAtMs = new Date(nextExpiresAt).getTime();
-		const fallbackDelay = 5 * 60 * 1000;
-		const delay = Number.isFinite(expiresAtMs)
-			? Math.max(0, expiresAtMs - Date.now() - earlySeconds * 1000)
-			: fallbackDelay;
-
-		timeout = setTimeout(async () => {
-			const payload = await refreshKendraAdminSession();
-
-			if (cancelled) return;
-
-			if (payload?.expiresAt) {
-				onRefresh?.(payload);
-				schedule(payload.expiresAt);
-				return;
-			}
-
-			schedule(new Date(Date.now() + fallbackDelay).toISOString());
-		}, delay);
+		currentExpiresAt = nextExpiresAt;
+		timeout = setTimeout(
+			() => void refreshNow(),
+			getKendraAdminSessionRefreshDelayMs({
+				expiresAt: currentExpiresAt,
+				refreshEarlySeconds,
+			}),
+		);
 	};
+
+	const refreshNow = async () => {
+		const payload = await refreshKendraAdminSession();
+
+		if (cancelled) return;
+
+		if (payload?.expiresAt) {
+			onRefresh?.(payload);
+			schedule(payload.expiresAt);
+			return;
+		}
+
+		schedule(new Date(Date.now() + FALLBACK_REFRESH_DELAY_MS).toISOString());
+	};
+
+	const refreshIfNeeded = () => {
+		if (cancelled) return;
+
+		if (
+			typeof document !== "undefined" &&
+			document.visibilityState === "hidden"
+		) {
+			return;
+		}
+
+		const delay = getKendraAdminSessionRefreshDelayMs({
+			expiresAt: currentExpiresAt,
+			refreshEarlySeconds,
+		});
+
+		if (delay <= 0) {
+			void refreshNow();
+		}
+	};
+
+	if (typeof window !== "undefined") {
+		window.addEventListener("focus", refreshIfNeeded);
+	}
+
+	if (typeof document !== "undefined") {
+		document.addEventListener("visibilitychange", refreshIfNeeded);
+	}
 
 	schedule(expiresAt);
 
 	return () => {
 		cancelled = true;
 		if (timeout) clearTimeout(timeout);
+		if (typeof window !== "undefined") {
+			window.removeEventListener("focus", refreshIfNeeded);
+		}
+		if (typeof document !== "undefined") {
+			document.removeEventListener("visibilitychange", refreshIfNeeded);
+		}
 	};
 }
