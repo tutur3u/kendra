@@ -4,6 +4,18 @@ import { useEffect, type ReactNode, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 
+function restoreNativeScrollState() {
+  document.documentElement.classList.remove(
+    "lenis",
+    "lenis-smooth",
+    "lenis-stopped",
+    "lenis-scrolling",
+  );
+  document.documentElement.style.removeProperty("overflow");
+  document.body.style.removeProperty("overflow");
+  document.body.style.removeProperty("height");
+}
+
 export function SmoothScroll({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const lenisRef = useRef<Lenis | null>(null);
@@ -13,6 +25,7 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     if (isAdminRoute) {
       lenisRef.current?.destroy();
       lenisRef.current = null;
+      restoreNativeScrollState();
       return;
     }
 
