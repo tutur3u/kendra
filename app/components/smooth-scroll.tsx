@@ -1,14 +1,21 @@
 "use client";
 
-import { useEffect, ReactNode, useRef } from "react";
+import { useEffect, type ReactNode, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 
 export function SmoothScroll({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const lenisRef = useRef<Lenis | null>(null);
+  const isAdminRoute = pathname.startsWith("/admin");
 
   useEffect(() => {
+    if (isAdminRoute) {
+      lenisRef.current?.destroy();
+      lenisRef.current = null;
+      return;
+    }
+
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -21,25 +28,27 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     });
 
     lenisRef.current = lenis;
+    let frameId = 0;
 
     function raf(time: number) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      frameId = requestAnimationFrame(raf);
     }
 
-    requestAnimationFrame(raf);
+    frameId = requestAnimationFrame(raf);
 
     return () => {
+      cancelAnimationFrame(frameId);
       lenis.destroy();
       lenisRef.current = null;
     };
-  }, []);
+  }, [isAdminRoute]);
 
   useEffect(() => {
-    if (lenisRef.current) {
+    if (!isAdminRoute && lenisRef.current) {
       lenisRef.current.scrollTo(0, { immediate: true });
     }
-  }, [pathname]);
+  }, [isAdminRoute, pathname]);
 
   return <>{children}</>;
 }

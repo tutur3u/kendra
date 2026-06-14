@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import type { KendraEditableSiteContent } from "@/lib/kendra-admin-site-content-model";
 import { adminFetch } from "./kendra-admin-session-client";
@@ -51,14 +51,19 @@ export function KendraAdminSiteContentForm({
 	const [draft, setDraft] = useState(() => cloneContent(initialContent));
 	const [lastSaved, setLastSaved] = useState(() => cloneContent(initialContent));
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+	const [hasChanges, setHasChanges] = useState(false);
 	const [saving, setSaving] = useState(false);
-	const hasChanges = useMemo(
-		() => JSON.stringify(draft) !== JSON.stringify(lastSaved),
-		[draft, lastSaved],
-	);
+	const [saveStep, setSaveStep] = useState<string | null>(null);
+
+	const updateDraft = (
+		updater: (current: KendraEditableSiteContent) => KendraEditableSiteContent,
+	) => {
+		setHasChanges(true);
+		setDraft(updater);
+	};
 
 	const updateSite = (field: SiteField, value: string) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			site: {
 				...current.site,
@@ -72,7 +77,7 @@ export function KendraAdminSiteContentForm({
 		index: number,
 		value: string,
 	) => {
-		setDraft((current) => {
+		updateDraft((current) => {
 			const items = [...current[field]];
 			items[index] = value;
 			return { ...current, [field]: items };
@@ -80,7 +85,7 @@ export function KendraAdminSiteContentForm({
 	};
 
 	const addStringListItem = (field: StringListField) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			[field]: [...current[field], stringListDefaults[field]],
 		}));
@@ -91,14 +96,14 @@ export function KendraAdminSiteContentForm({
 		index: number,
 		direction: -1 | 1,
 	) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			[field]: moveItem(current[field], index, direction),
 		}));
 	};
 
 	const removeStringListItem = (field: StringListField, index: number) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			[field]: current[field].filter((_, itemIndex) => itemIndex !== index),
 		}));
@@ -109,7 +114,7 @@ export function KendraAdminSiteContentForm({
 		field: ClientLogoField,
 		value: string,
 	) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			clientLogos: current.clientLogos.map((item, itemIndex) =>
 				itemIndex === index ? { ...item, [field]: value } : item,
@@ -118,21 +123,21 @@ export function KendraAdminSiteContentForm({
 	};
 
 	const addClientLogo = () => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			clientLogos: [...current.clientLogos, { image: "/images/client-logo.png", name: "New Client" }],
 		}));
 	};
 
 	const moveClientLogo = (index: number, direction: -1 | 1) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			clientLogos: moveItem(current.clientLogos, index, direction),
 		}));
 	};
 
 	const removeClientLogo = (index: number) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			clientLogos: current.clientLogos.filter((_, itemIndex) => itemIndex !== index),
 		}));
@@ -143,7 +148,7 @@ export function KendraAdminSiteContentForm({
 		field: StudioSpecField,
 		value: string,
 	) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			studioSpecs: current.studioSpecs.map((item, itemIndex) =>
 				itemIndex === index ? { ...item, [field]: value } : item,
@@ -152,28 +157,28 @@ export function KendraAdminSiteContentForm({
 	};
 
 	const addStudioSpec = () => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			studioSpecs: [...current.studioSpecs, { label: "New spec", value: "" }],
 		}));
 	};
 
 	const moveStudioSpec = (index: number, direction: -1 | 1) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			studioSpecs: moveItem(current.studioSpecs, index, direction),
 		}));
 	};
 
 	const removeStudioSpec = (index: number) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			studioSpecs: current.studioSpecs.filter((_, itemIndex) => itemIndex !== index),
 		}));
 	};
 
 	const updateExperienceGroupTitle = (groupIndex: number, value: string) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: current.experienceGroups.map((group, index) =>
 				index === groupIndex ? { ...group, title: value } : group,
@@ -182,7 +187,7 @@ export function KendraAdminSiteContentForm({
 	};
 
 	const addExperienceGroup = () => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: [
 				...current.experienceGroups,
@@ -195,14 +200,14 @@ export function KendraAdminSiteContentForm({
 	};
 
 	const moveExperienceGroup = (index: number, direction: -1 | 1) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: moveItem(current.experienceGroups, index, direction),
 		}));
 	};
 
 	const removeExperienceGroup = (index: number) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: current.experienceGroups.filter(
 				(_, itemIndex) => itemIndex !== index,
@@ -216,7 +221,7 @@ export function KendraAdminSiteContentForm({
 		field: ExperienceItemField,
 		value: string,
 	) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: current.experienceGroups.map((group, index) =>
 				index === groupIndex
@@ -239,7 +244,7 @@ export function KendraAdminSiteContentForm({
 		field: ExperienceVisualField,
 		value: string,
 	) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: current.experienceGroups.map((group, index) =>
 				index === groupIndex
@@ -263,7 +268,7 @@ export function KendraAdminSiteContentForm({
 	};
 
 	const addExperienceItem = (groupIndex: number) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: current.experienceGroups.map((group, index) =>
 				index === groupIndex
@@ -288,7 +293,7 @@ export function KendraAdminSiteContentForm({
 		itemIndex: number,
 		direction: -1 | 1,
 	) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: current.experienceGroups.map((group, index) =>
 				index === groupIndex
@@ -299,7 +304,7 @@ export function KendraAdminSiteContentForm({
 	};
 
 	const removeExperienceItem = (groupIndex: number, itemIndex: number) => {
-		setDraft((current) => ({
+		updateDraft((current) => ({
 			...current,
 			experienceGroups: current.experienceGroups.map((group, index) =>
 				index === groupIndex
@@ -317,18 +322,23 @@ export function KendraAdminSiteContentForm({
 	const resetDraft = () => {
 		setDraft(cloneContent(lastSaved));
 		setFieldErrors({});
+		setHasChanges(false);
+		setSaveStep(null);
 	};
 
 	const saveContent = async () => {
 		setSaving(true);
+		setSaveStep("Preparing changes");
 		setFieldErrors({});
 
 		try {
+			setSaveStep("Saving to dashboard");
 			const response = await adminFetch("/api/admin/site-content", {
 				body: JSON.stringify({ content: draft }),
 				headers: { "Content-Type": "application/json" },
 				method: "PUT",
 			});
+			setSaveStep("Reading saved content");
 			const payload = (await response.json().catch(() => ({}))) as SiteContentMutationResponse;
 
 			if (!response.ok || !payload.content) {
@@ -337,8 +347,10 @@ export function KendraAdminSiteContentForm({
 				return;
 			}
 
+			setSaveStep("Refreshing editor");
 			setDraft(cloneContent(payload.content));
 			setLastSaved(cloneContent(payload.content));
+			setHasChanges(false);
 			onSaved?.(payload.content);
 			toast.success("Saved page content.");
 		} catch (error) {
@@ -347,6 +359,7 @@ export function KendraAdminSiteContentForm({
 			);
 		} finally {
 			setSaving(false);
+			setSaveStep(null);
 		}
 	};
 
@@ -376,6 +389,7 @@ export function KendraAdminSiteContentForm({
 						Cancel changes
 					</button>
 					<button
+						aria-busy={saving}
 						className={primaryButton}
 						disabled={saving || !hasChanges}
 						onClick={() => void saveContent()}
@@ -385,6 +399,7 @@ export function KendraAdminSiteContentForm({
 					</button>
 				</div>
 			</div>
+			{saving && saveStep ? <SaveProgress step={saveStep} /> : null}
 
 			<ProfileAndLinksSection
 				content={draft}
@@ -424,12 +439,32 @@ export function KendraAdminSiteContentForm({
 				listActions={listActions}
 				onAddStudioSpec={addStudioSpec}
 				onContactIntroChange={(value) =>
-					setDraft((current) => ({ ...current, contactIntro: value }))
+					updateDraft((current) => ({ ...current, contactIntro: value }))
 				}
 				onMoveStudioSpec={moveStudioSpec}
 				onRemoveStudioSpec={removeStudioSpec}
 				onUpdateStudioSpec={updateStudioSpec}
 			/>
 		</section>
+	);
+}
+
+function SaveProgress({ step }: { step: string }) {
+	return (
+		<div
+			aria-live="polite"
+			className="flex items-center gap-3 border border-accent/20 bg-white p-4 text-sm text-ink shadow-[0_16px_44px_rgba(10,10,10,0.04)]"
+		>
+			<span
+				aria-hidden="true"
+				className="h-5 w-5 shrink-0 animate-[slow-spin_700ms_linear_infinite] rounded-full border-2 border-accent/25 border-t-accent"
+			/>
+			<span>
+				<span className="font-bold uppercase tracking-[0.12em] text-accent">
+					Current step
+				</span>
+				<span className="ml-2 font-medium text-ink">{step}</span>
+			</span>
+		</div>
 	);
 }

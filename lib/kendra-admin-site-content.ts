@@ -125,9 +125,8 @@ export async function saveKendraAdminSiteContent(
 		await client.createEntry(workspaceId, payload);
 	}
 
-	const nextStudio = (await client.getStudio(workspaceId)) as KendraAdminStudioPayload;
 	revalidateKendraContent();
-	return readKendraAdminSiteContent(nextStudio).content;
+	return content;
 }
 
 export async function refreshKendraAdminSiteContent(accessToken: string) {
