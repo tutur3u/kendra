@@ -1,9 +1,9 @@
 import {
   buildKendraSignedUploadHeaders,
   createKendraExternalProjectsClient,
-  getKendraAdminSession,
   type KendraSignedAssetUploadUrl,
 } from "@/lib/kendra-admin-api";
+import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { ensureKendraAdminSiteContentEntry } from "@/lib/kendra-admin-site-content";
 import {
@@ -181,10 +181,10 @@ async function finalizeUpload({
 }
 
 export async function POST(request: Request) {
-  const session = await getKendraAdminSession();
+  const auth = await getKendraAdminRouteSession();
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.session) {
+    return auth.response;
   }
 
   const body = await readJsonBody(request);
@@ -197,19 +197,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    return readString(body, "phase") === "finalize"
-      ? await finalizeUpload({
-          body,
-          sessionAccessToken: session.accessToken,
-        })
-      : await prepareUploadUrl({
-          body,
-          sessionAccessToken: session.accessToken,
-        });
+    const response =
+      readString(body, "phase") === "finalize"
+        ? await finalizeUpload({
+            body,
+            sessionAccessToken: auth.session.accessToken,
+          })
+        : await prepareUploadUrl({
+            body,
+            sessionAccessToken: auth.session.accessToken,
+          });
+    return auth.withSessionCookie(response);
   } catch (error) {
-    return createKendraAdminErrorResponse(error, "Image upload failed", {
-      label: "Uploading image",
-      step: "site-image-upload",
-    });
+    return auth.withSessionCookie(
+      createKendraAdminErrorResponse(error, "Image upload failed", {
+        label: "Uploading image",
+        step: "site-image-upload",
+      }),
+    );
   }
 }

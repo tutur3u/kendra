@@ -1,9 +1,9 @@
 import {
 	buildKendraSignedUploadHeaders,
 	createKendraExternalProjectsClient,
-	getKendraAdminSession,
 	type KendraSignedAssetUploadUrl,
 } from "@/lib/kendra-admin-api";
+import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { getKendraWorkspaceId } from "@/lib/kendra-config";
 import {
 	isKendraAudioFileDescriptor,
@@ -28,10 +28,10 @@ function readSize(value: unknown) {
 }
 
 export async function POST(request: Request) {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
 	let body: Record<string, unknown>;
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		const client = createKendraExternalProjectsClient(session.accessToken);
+		const client = createKendraExternalProjectsClient(auth.session.accessToken);
 		const uploadUrl = (await client.createAssetUploadUrl(getKendraWorkspaceId(), {
 			collectionType: KENDRA_REEL_COLLECTION_SLUG,
 			contentType: contentType || "application/octet-stream",
@@ -85,17 +85,21 @@ export async function POST(request: Request) {
 			size: number;
 		})) as KendraSignedAssetUploadUrl;
 
-		return NextResponse.json({
-			fullPath: uploadUrl.fullPath,
-			headers: buildKendraSignedUploadHeaders(uploadUrl, contentType),
-			method: "PUT",
-			path: uploadUrl.path,
-			signedUrl: uploadUrl.signedUrl,
-		});
+		return auth.withSessionCookie(
+			NextResponse.json({
+				fullPath: uploadUrl.fullPath,
+				headers: buildKendraSignedUploadHeaders(uploadUrl, contentType),
+				method: "PUT",
+				path: uploadUrl.path,
+				signedUrl: uploadUrl.signedUrl,
+			}),
+		);
 	} catch (error) {
-		return createKendraAdminErrorResponse(error, "Audio upload preparation failed", {
-			label: "Preparing upload",
-			step: "prepare-upload",
-		});
+		return auth.withSessionCookie(
+			createKendraAdminErrorResponse(error, "Audio upload preparation failed", {
+				label: "Preparing upload",
+				step: "prepare-upload",
+			}),
+		);
 	}
 }

@@ -1,7 +1,7 @@
 import {
 	createKendraExternalProjectsClient,
-	getKendraAdminSession,
 } from "@/lib/kendra-admin-api";
+import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { getKendraWorkspaceId } from "@/lib/kendra-config";
 import {
 	createKendraReel,
@@ -15,26 +15,30 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
 	try {
-		return NextResponse.json({
-			reels: await refreshKendraReels(session.accessToken),
-		});
+		return auth.withSessionCookie(
+			NextResponse.json({
+				reels: await refreshKendraReels(auth.session.accessToken),
+			}),
+		);
 	} catch (error) {
-		return createKendraAdminErrorResponse(error, "Reel refresh failed");
+		return auth.withSessionCookie(
+			createKendraAdminErrorResponse(error, "Reel refresh failed"),
+		);
 	}
 }
 
 export async function POST(request: Request) {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
 	try {
@@ -44,15 +48,19 @@ export async function POST(request: Request) {
 			return NextResponse.json({ errors }, { status: 400 });
 		}
 
-		const client = createKendraExternalProjectsClient(session.accessToken);
+		const client = createKendraExternalProjectsClient(auth.session.accessToken);
 		const workspaceId = getKendraWorkspaceId();
 
-		return createKendraReelMutationStream({
-			fallback: "Reel request failed",
-			run: (onProgress) =>
-				createKendraReel(client, workspaceId, input, { onProgress }),
-		});
+		return auth.withSessionCookie(
+			createKendraReelMutationStream({
+				fallback: "Reel request failed",
+				run: (onProgress) =>
+					createKendraReel(client, workspaceId, input, { onProgress }),
+			}),
+		);
 	} catch (error) {
-		return createKendraAdminErrorResponse(error, "Reel request failed");
+		return auth.withSessionCookie(
+			createKendraAdminErrorResponse(error, "Reel request failed"),
+		);
 	}
 }

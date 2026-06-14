@@ -1,11 +1,18 @@
 import { describe, expect, mock, test } from "bun:test";
+import { NextResponse } from "next/server";
 
 const createKendraReel = mock(async () => ({ reel: null, reels: [] }));
 const updateKendraReel = mock(async () => ({ reel: null, reels: [] }));
 
 mock.module("@/lib/kendra-admin-api", () => ({
 	createKendraExternalProjectsClient: () => ({}),
-	getKendraAdminSession: async () => ({ accessToken: "app-token" }),
+}));
+
+mock.module("@/lib/kendra-admin-route-session", () => ({
+	getKendraAdminRouteSession: async () => ({
+		session: { accessToken: "app-token" },
+		withSessionCookie: (response: NextResponse) => response,
+	}),
 }));
 
 mock.module("@/lib/kendra-admin-reels", () => ({

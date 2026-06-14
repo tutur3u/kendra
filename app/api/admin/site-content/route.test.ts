@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { NextResponse } from "next/server";
 import {
 	DEFAULT_KENDRA_EDITABLE_SITE_CONTENT,
 	type KendraEditableSiteContent,
@@ -13,6 +14,7 @@ let currentStudio: KendraAdminStudioPayload = {
 	entries: [],
 };
 const client = { name: "external-projects-client" };
+const withSessionCookie = mock((response: NextResponse) => response);
 const saveKendraAdminSiteContent = mock(
 	async (
 		_client: unknown,
@@ -23,8 +25,24 @@ const saveKendraAdminSiteContent = mock(
 
 mock.module("@/lib/kendra-admin-api", () => ({
 	createKendraExternalProjectsClient: () => client,
-	getKendraAdminSession: async () => currentSession,
 	getKendraAdminStudio: async () => currentStudio,
+}));
+
+mock.module("@/lib/kendra-admin-route-session", () => ({
+	getKendraAdminRouteSession: async () =>
+		currentSession
+			? {
+					session: currentSession,
+					withSessionCookie,
+				}
+			: {
+					response: NextResponse.json(
+						{ error: "Unauthorized" },
+						{ status: 401 },
+					),
+					session: null,
+					withSessionCookie: null,
+				},
 }));
 
 mock.module("@/lib/kendra-admin-site-content", () => ({
@@ -54,6 +72,7 @@ beforeEach(() => {
 		entries: [],
 	};
 	saveKendraAdminSiteContent.mockClear();
+	withSessionCookie.mockClear();
 });
 
 describe("Kendra site content admin route", () => {
@@ -99,5 +118,6 @@ describe("Kendra site content admin route", () => {
 			"ws-1",
 			content,
 		);
+		expect(withSessionCookie).toHaveBeenCalledTimes(1);
 	});
 });

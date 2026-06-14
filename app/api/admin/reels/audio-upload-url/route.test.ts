@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { NextResponse } from "next/server";
 
 const createAssetUploadUrl = mock(async () => ({
 	fullPath: "ws-1/external-projects/kendra/voice-reels/interactive/reel.mp3",
@@ -20,8 +21,23 @@ mock.module("@/lib/kendra-admin-api", () => ({
 	createKendraExternalProjectsClient: () => ({
 		createAssetUploadUrl,
 	}),
-	getKendraAdminSession: async () =>
-		hasSession ? { accessToken: "app-token" } : null,
+}));
+
+mock.module("@/lib/kendra-admin-route-session", () => ({
+	getKendraAdminRouteSession: async () =>
+		hasSession
+			? {
+					session: { accessToken: "app-token" },
+					withSessionCookie: (response: NextResponse) => response,
+				}
+			: {
+					response: NextResponse.json(
+						{ error: "Unauthorized" },
+						{ status: 401 },
+					),
+					session: null,
+					withSessionCookie: null,
+				},
 }));
 
 mock.module("@/lib/kendra-config", () => ({

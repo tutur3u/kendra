@@ -1,4 +1,4 @@
-import { getKendraAdminSession } from "@/lib/kendra-admin-api";
+import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { refreshKendraReels } from "@/lib/kendra-admin-reels";
 import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { NextResponse } from "next/server";
@@ -6,17 +6,21 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
 	try {
-		return NextResponse.json({
-			reels: await refreshKendraReels(session.accessToken),
-		});
+		return auth.withSessionCookie(
+			NextResponse.json({
+				reels: await refreshKendraReels(auth.session.accessToken),
+			}),
+		);
 	} catch (error) {
-		return createKendraAdminErrorResponse(error, "Reel refresh failed");
+		return auth.withSessionCookie(
+			createKendraAdminErrorResponse(error, "Reel refresh failed"),
+		);
 	}
 }

@@ -1,8 +1,8 @@
 import {
 	createKendraExternalProjectsClient,
-	getKendraAdminSession,
 	getKendraAdminStudio,
 } from "@/lib/kendra-admin-api";
+import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { saveKendraAdminSiteContent } from "@/lib/kendra-admin-site-content";
 import {
@@ -15,30 +15,34 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
 	try {
-		const studio = await getKendraAdminStudio(session.accessToken);
-		return NextResponse.json({
-			content: readKendraAdminSiteContent(studio).content,
-		});
+		const studio = await getKendraAdminStudio(auth.session.accessToken);
+		return auth.withSessionCookie(
+			NextResponse.json({
+				content: readKendraAdminSiteContent(studio).content,
+			}),
+		);
 	} catch (error) {
-		return createKendraAdminErrorResponse(
-			error,
-			"Site content refresh failed",
+		return auth.withSessionCookie(
+			createKendraAdminErrorResponse(
+				error,
+				"Site content refresh failed",
+			),
 		);
 	}
 }
 
 export async function PUT(request: Request) {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
 	try {
@@ -50,13 +54,15 @@ export async function PUT(request: Request) {
 		}
 
 		const savedContent = await saveKendraAdminSiteContent(
-			createKendraExternalProjectsClient(session.accessToken),
+			createKendraExternalProjectsClient(auth.session.accessToken),
 			getKendraWorkspaceId(),
 			content,
 		);
 
-		return NextResponse.json({ content: savedContent });
+		return auth.withSessionCookie(NextResponse.json({ content: savedContent }));
 	} catch (error) {
-		return createKendraAdminErrorResponse(error, "Site content save failed");
+		return auth.withSessionCookie(
+			createKendraAdminErrorResponse(error, "Site content save failed"),
+		);
 	}
 }

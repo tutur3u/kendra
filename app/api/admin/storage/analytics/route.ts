@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
-import { getKendraAdminSession } from "@/lib/kendra-admin-api";
+import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { getKendraStorageAnalytics } from "@/lib/kendra-storage-analytics";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
-	return NextResponse.json(
-		await getKendraStorageAnalytics(session.accessToken),
+	return auth.withSessionCookie(
+		NextResponse.json(
+			await getKendraStorageAnalytics(auth.session.accessToken),
+		),
 	);
 }

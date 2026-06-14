@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { navigation, site } from "../content";
 import {
 	adminFetch,
@@ -41,10 +41,12 @@ type AdminSessionState = {
 
 export function SiteHeader() {
 	const pathname = usePathname();
+	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [adminSession, setAdminSession] = useState<AdminSessionState | null>(null);
+	const refreshedAdminPathRef = useRef<string | null>(null);
 	const isAdminSignedIn = adminSession?.authenticated === true;
 
 	useEffect(() => {
@@ -109,16 +111,55 @@ export function SiteHeader() {
 		const hint = readKendraAdminSessionHint();
 		if (!hint) return;
 
-		const hydrateTimer = window.setTimeout(() => {
-			setAdminSession((current) =>
-				current ?? {
-					authenticated: true,
-					email: hint.email,
-					expiresAt: hint.expiresAt,
-					refreshEarlySeconds: hint.refreshEarlySeconds ?? null,
-				},
-			);
-		}, 0);
+		let cancelled = false;
+
+		const updateVerifiedSession = (payload: AdminSessionState) => {
+			if (!payload.authenticated || !payload.expiresAt) {
+				clearKendraAdminSessionHint();
+				setAdminSession({ authenticated: false, email: null });
+				return;
+			}
+
+			writeKendraAdminSessionHint({
+				email: payload.email,
+				expiresAt: payload.expiresAt,
+				refreshEarlySeconds: payload.refreshEarlySeconds ?? null,
+			});
+			setAdminSession(payload);
+
+			if (
+				pathname.startsWith("/admin") &&
+				refreshedAdminPathRef.current !== pathname
+			) {
+				refreshedAdminPathRef.current = pathname;
+				router.refresh();
+			}
+		};
+
+		async function verifyHintSession() {
+			try {
+				const response = await adminFetch("/api/admin/session", {
+					cache: "no-store",
+				});
+				const payload = (await response
+					.json()
+					.catch(() => null)) as AdminSessionState | null;
+
+				if (!cancelled) {
+					updateVerifiedSession(
+						payload ?? { authenticated: false, email: null },
+					);
+				}
+			} catch {
+				if (!cancelled) {
+					clearKendraAdminSessionHint();
+					setAdminSession({ authenticated: false, email: null });
+				}
+			}
+		}
+
+		void verifyHintSession();
+
 		const stopRefresh = scheduleKendraAdminSessionRefresh({
 			expiresAt: hint.expiresAt,
 			onRefresh: (payload) => {
@@ -126,20 +167,15 @@ export function SiteHeader() {
 					fallbackEmail: hint.email,
 					payload,
 				});
-				setAdminSession((current) =>
-					current?.authenticated === false
-						? current
-						: {
-								authenticated: true,
-								email: payload.email ?? current?.email ?? hint.email,
-								expiresAt: payload.expiresAt ?? current?.expiresAt ?? hint.expiresAt,
-								refreshEarlySeconds:
-									payload.refreshEarlySeconds ??
-									current?.refreshEarlySeconds ??
-									hint.refreshEarlySeconds ??
-									null,
-							},
-				);
+				if (payload.expiresAt) {
+					updateVerifiedSession({
+						authenticated: true,
+						email: payload.email ?? hint.email,
+						expiresAt: payload.expiresAt,
+						refreshEarlySeconds:
+							payload.refreshEarlySeconds ?? hint.refreshEarlySeconds ?? null,
+					});
+				}
 			},
 			onRefreshFailed: () => {
 				clearKendraAdminSessionHint();
@@ -150,10 +186,10 @@ export function SiteHeader() {
 		});
 
 		return () => {
-			window.clearTimeout(hydrateTimer);
+			cancelled = true;
 			stopRefresh();
 		};
-	}, [pathname]);
+	}, [pathname, router]);
 
 	return (
 		<>

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-	getKendraAdminSession,
-	revalidateKendraContent,
-} from "@/lib/kendra-admin-api";
+import { revalidateKendraContent } from "@/lib/kendra-admin-api";
+import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { getKendraApiBaseUrl, getKendraWorkspaceId } from "@/lib/kendra-config";
 
 export const dynamic = "force-dynamic";
@@ -29,15 +27,15 @@ async function readPlatformPayload(response: Response) {
 }
 
 async function forwardStorageRequest(request: Request, method: string) {
-	const session = await getKendraAdminSession();
+	const auth = await getKendraAdminRouteSession();
 
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!auth.session) {
+		return auth.response;
 	}
 
 	const headers: Record<string, string> = {
 		Accept: "application/json",
-		Authorization: `Bearer ${session.accessToken}`,
+		Authorization: `Bearer ${auth.session.accessToken}`,
 	};
 	let body: BodyInit | undefined;
 
@@ -64,7 +62,9 @@ async function forwardStorageRequest(request: Request, method: string) {
 		revalidateKendraContent();
 	}
 
-	return NextResponse.json(payload, { status: response.status });
+	return auth.withSessionCookie(
+		NextResponse.json(payload, { status: response.status }),
+	);
 }
 
 export async function GET(request: Request) {

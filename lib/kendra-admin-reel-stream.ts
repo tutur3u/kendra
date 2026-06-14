@@ -3,6 +3,7 @@ import type {
 } from "./kendra-admin-reels";
 import type { KendraAdminReel } from "./kendra-admin-reel-model";
 import { getKendraAdminErrorPayload } from "./kendra-admin-route-errors";
+import { NextResponse } from "next/server";
 
 type MutationResult = {
 	reel: KendraAdminReel | null;
@@ -87,7 +88,7 @@ export function createKendraReelMutationStream({
 		},
 	});
 
-	return new Response(stream, {
+	return new NextResponse(stream, {
 		headers: {
 			"Cache-Control": "no-store",
 			"Content-Type": "application/x-ndjson; charset=utf-8",
