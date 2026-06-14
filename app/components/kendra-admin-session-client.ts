@@ -1,6 +1,7 @@
 "use client";
 
 export type RefreshSessionResponse = {
+  email?: string | null;
   expiresAt?: string;
   refreshEarlySeconds?: number;
   valid?: boolean;
@@ -123,11 +124,15 @@ export async function adminFetch(
 export function scheduleKendraAdminSessionRefresh({
   expiresAt,
   onRefresh,
+  onRefreshFailed,
   refreshEarlySeconds,
+  retryOnRefreshFailure = true,
 }: {
   expiresAt: string;
   onRefresh?: (payload: RefreshSessionResponse) => void;
+  onRefreshFailed?: () => void;
   refreshEarlySeconds?: number | null;
+  retryOnRefreshFailure?: boolean;
 }) {
   let cancelled = false;
   let currentExpiresAt = expiresAt;
@@ -161,6 +166,8 @@ export function scheduleKendraAdminSessionRefresh({
       return;
     }
 
+    onRefreshFailed?.();
+    if (!retryOnRefreshFailure) return;
     schedule(new Date(Date.now() + FALLBACK_REFRESH_DELAY_MS).toISOString());
   };
 

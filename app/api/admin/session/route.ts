@@ -1,20 +1,51 @@
 import { NextResponse } from "next/server";
-import { getKendraAdminSession } from "@/lib/kendra-admin-api";
+import type { KendraAdminSession } from "@/lib/kendra-session";
+import {
+	getKendraSessionReadStateFromCookies,
+	refreshKendraSessionFromCookies,
+	setKendraSessionCookie,
+} from "@/lib/kendra-session";
 
 export const dynamic = "force-dynamic";
 
+function createSessionPayload(session: KendraAdminSession) {
+	return {
+		authenticated: true,
+		email: session.user.email,
+		expiresAt: session.expiresAt,
+		refreshEarlySeconds: session.refreshEarlySeconds,
+	};
+}
+
+function createSignedOutPayload() {
+	return {
+		authenticated: false,
+		email: null,
+		expiresAt: null,
+		refreshEarlySeconds: null,
+	};
+}
+
 export async function GET() {
 	try {
-		const session = await getKendraAdminSession();
+		const state = await getKendraSessionReadStateFromCookies();
 
-		return NextResponse.json({
-			authenticated: Boolean(session),
-			email: session?.user.email ?? null,
-		});
+		if (state.status === "authenticated") {
+			return NextResponse.json(createSessionPayload(state.session));
+		}
+
+		if (state.status === "refreshable") {
+			const session = await refreshKendraSessionFromCookies();
+
+			if (session) {
+				const response = NextResponse.json(createSessionPayload(session));
+				setKendraSessionCookie(response, session);
+				return response;
+			}
+		}
+
+		return NextResponse.json(createSignedOutPayload());
 	} catch {
-		return NextResponse.json({
-			authenticated: false,
-			email: null,
-		});
+		return NextResponse.json(createSignedOutPayload());
 	}
 }

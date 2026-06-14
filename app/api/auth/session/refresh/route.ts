@@ -14,6 +14,7 @@ export async function POST() {
 	}
 
 	const response = NextResponse.json({
+		email: session.user.email,
 		expiresAt: session.expiresAt,
 		refreshEarlySeconds: session.refreshEarlySeconds,
 		userId: session.user.id,

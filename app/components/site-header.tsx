@@ -4,7 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navigation, site } from "../content";
-import { adminFetch } from "./kendra-admin-session-client";
+import {
+	adminFetch,
+	scheduleKendraAdminSessionRefresh,
+} from "./kendra-admin-session-client";
+import {
+	clearKendraAdminSessionHint,
+	readKendraAdminSessionHint,
+	writeKendraAdminSessionHint,
+	writeKendraAdminSessionRefreshHint,
+} from "./kendra-admin-session-hint";
 import { cn, shell } from "./ui";
 
 function Mark() {
@@ -26,6 +35,8 @@ function Mark() {
 type AdminSessionState = {
 	authenticated: boolean;
 	email: string | null;
+	expiresAt?: string | null;
+	refreshEarlySeconds?: number | null;
 };
 
 export function SiteHeader() {
@@ -34,6 +45,7 @@ export function SiteHeader() {
 	const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [adminSession, setAdminSession] = useState<AdminSessionState | null>(null);
+	const isAdminSignedIn = adminSession?.authenticated === true;
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -68,10 +80,20 @@ export function SiteHeader() {
 
 				if (!cancelled) {
 					setAdminSession(payload ?? { authenticated: false, email: null });
+					if (payload?.authenticated && payload.expiresAt) {
+						writeKendraAdminSessionHint({
+							email: payload.email,
+							expiresAt: payload.expiresAt,
+							refreshEarlySeconds: payload.refreshEarlySeconds ?? null,
+						});
+					} else if (payload && !payload.authenticated) {
+						clearKendraAdminSessionHint();
+					}
 				}
 			} catch {
 				if (!cancelled) {
 					setAdminSession({ authenticated: false, email: null });
+					clearKendraAdminSessionHint();
 				}
 			}
 		}
@@ -82,6 +104,56 @@ export function SiteHeader() {
 			cancelled = true;
 		};
 	}, [adminSession, isAvatarMenuOpen]);
+
+	useEffect(() => {
+		const hint = readKendraAdminSessionHint();
+		if (!hint) return;
+
+		const hydrateTimer = window.setTimeout(() => {
+			setAdminSession((current) =>
+				current ?? {
+					authenticated: true,
+					email: hint.email,
+					expiresAt: hint.expiresAt,
+					refreshEarlySeconds: hint.refreshEarlySeconds ?? null,
+				},
+			);
+		}, 0);
+		const stopRefresh = scheduleKendraAdminSessionRefresh({
+			expiresAt: hint.expiresAt,
+			onRefresh: (payload) => {
+				writeKendraAdminSessionRefreshHint({
+					fallbackEmail: hint.email,
+					payload,
+				});
+				setAdminSession((current) =>
+					current?.authenticated === false
+						? current
+						: {
+								authenticated: true,
+								email: payload.email ?? current?.email ?? hint.email,
+								expiresAt: payload.expiresAt ?? current?.expiresAt ?? hint.expiresAt,
+								refreshEarlySeconds:
+									payload.refreshEarlySeconds ??
+									current?.refreshEarlySeconds ??
+									hint.refreshEarlySeconds ??
+									null,
+							},
+				);
+			},
+			onRefreshFailed: () => {
+				clearKendraAdminSessionHint();
+				setAdminSession({ authenticated: false, email: null });
+			},
+			refreshEarlySeconds: hint.refreshEarlySeconds,
+			retryOnRefreshFailure: false,
+		});
+
+		return () => {
+			window.clearTimeout(hydrateTimer);
+			stopRefresh();
+		};
+	}, [pathname]);
 
 	return (
 		<>
@@ -169,7 +241,9 @@ export function SiteHeader() {
 									Account
 								</span>
 								<span className="mt-1 block truncate text-sm font-semibold text-ink">
-									{adminSession?.email ?? "Not signed in"}
+									{isAdminSignedIn
+										? (adminSession.email ?? "Admin session")
+										: "Not signed in"}
 								</span>
 							</div>
 							<Link
@@ -178,16 +252,21 @@ export function SiteHeader() {
 								onClick={() => setIsAvatarMenuOpen(false)}
 								role="menuitem"
 							>
-								Dashboard
+								{isAdminSignedIn ? "Dashboard" : "Open admin login"}
 							</Link>
-							<Link
-								href="/admin/logout"
-								className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent"
-								onClick={() => setIsAvatarMenuOpen(false)}
-								role="menuitem"
-							>
-								Log out
-							</Link>
+							{isAdminSignedIn ? (
+								<Link
+									href="/admin/logout"
+									className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent"
+									onClick={() => {
+										clearKendraAdminSessionHint();
+										setIsAvatarMenuOpen(false);
+									}}
+									role="menuitem"
+								>
+									Log out
+								</Link>
+							) : null}
 						</div>
 					</div>
 
