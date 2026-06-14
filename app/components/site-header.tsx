@@ -291,7 +291,7 @@ export function SiteHeader() {
 								{isAdminSignedIn ? "Dashboard" : "Open admin login"}
 							</Link>
 							{isAdminSignedIn ? (
-								<Link
+								<a
 									href="/admin/logout"
 									className="px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface hover:text-accent"
 									onClick={() => {
@@ -301,7 +301,7 @@ export function SiteHeader() {
 									role="menuitem"
 								>
 									Log out
-								</Link>
+								</a>
 							) : null}
 						</div>
 					</div>
