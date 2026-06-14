@@ -148,7 +148,7 @@ describe("Kendra CMS content mapping", () => {
 		expect(content.demos[0]?.duration).toBe("0:42");
 	});
 
-	test("keeps non-audio site sections static even if old CMS collections exist", () => {
+	test("keeps non-audio site sections static when legacy CMS collections exist", () => {
 		const content = buildKendraContent(
 			{
 				adapter: "kendra",
@@ -192,5 +192,78 @@ describe("Kendra CMS content mapping", () => {
 		expect(content.experienceGroups).toEqual(
 			DEFAULT_KENDRA_CONTENT.experienceGroups,
 		);
+	});
+
+	test("maps published site content into static public sections", () => {
+		const managedContent = {
+			...DEFAULT_KENDRA_CONTENT,
+			availability: ["Remote sessions on weekdays."],
+			bio: ["Updated bio paragraph."],
+			contactIntro: "Updated booking copy.",
+			experienceGroups: [
+				{
+					items: [
+						{
+							project: "Updated Project",
+							role: "Lead Voice",
+							visual: { label: "Updated Project", tone: "studio" },
+						},
+					],
+					title: "Updated Experience",
+				},
+			],
+			site: {
+				...DEFAULT_KENDRA_CONTENT.site,
+				resumeUrl: "https://example.com/resume",
+				tagline: "Updated tagline",
+			},
+			studioSpecs: [{ label: "Microphone", value: "Updated mic" }],
+		};
+		const content = buildKendraContent(
+			{
+				adapter: "kendra",
+				canonicalProjectId: "kendra-main",
+				collections: [
+					{
+						collection_type: "site-content",
+						config: null,
+						description: null,
+						id: "collection-site-content",
+						slug: "site-content",
+						title: "Site Content",
+						entries: [
+							{
+								assets: [],
+								blocks: [],
+								id: "entry-site-content",
+								metadata: {},
+								profile_data: {
+									content: managedContent,
+								},
+								published_at: "2026-05-17T09:00:00.000Z",
+								slug: "site-content",
+								status: "published",
+								subtitle: "Admin-managed page copy",
+								summary: "Editable public website content for Kendra Braun.",
+								title: "Website Content",
+							},
+						],
+					},
+				],
+				generatedAt: "2026-05-17T09:00:00.000Z",
+				loadingData: null,
+				profileData: {},
+				workspaceId: "ws-kendra",
+			},
+			{ apiBaseUrl: "https://platform.example/api/v1" },
+		);
+
+		expect(content.site.resumeUrl).toBe("https://example.com/resume");
+		expect(content.site.tagline).toBe("Updated tagline");
+		expect(content.experienceGroups).toEqual(managedContent.experienceGroups);
+		expect(content.studioSpecs).toEqual([{ label: "Microphone", value: "Updated mic" }]);
+		expect(content.availability).toEqual(["Remote sessions on weekdays."]);
+		expect(content.contactIntro).toBe("Updated booking copy.");
+		expect(content.demos).toEqual(DEFAULT_KENDRA_CONTENT.demos);
 	});
 });

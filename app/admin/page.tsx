@@ -10,6 +10,7 @@ import {
 	type KendraAdminStudioPayload,
 } from "@/lib/kendra-admin-api";
 import { readKendraAdminReels } from "@/lib/kendra-admin-reel-model";
+import { readKendraAdminSiteContent } from "@/lib/kendra-admin-site-content-model";
 import { getKendraStorageAnalytics } from "@/lib/kendra-storage-analytics";
 import { getKendraStorageFiles } from "@/lib/kendra-storage-files";
 
@@ -57,6 +58,7 @@ export default async function AdminPage({
 
 	return (
 		<KendraAdminClient
+			initialSiteContent={readKendraAdminSiteContent(studio).content}
 			initialReels={readKendraAdminReels(studio)}
 			sessionExpiresAt={session.expiresAt}
 			sessionRefreshEarlySeconds={session.refreshEarlySeconds}

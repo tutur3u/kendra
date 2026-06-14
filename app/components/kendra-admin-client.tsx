@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
+import type { KendraEditableSiteContent } from "@/lib/kendra-admin-site-content-model";
 import type { KendraStorageAnalyticsState } from "@/lib/kendra-storage-analytics";
 import type {
 	KendraStorageFileItem,
@@ -14,9 +15,10 @@ import {
 } from "./kendra-admin-session-client";
 import { KendraAdminReelForm } from "./kendra-admin-reel-form";
 import { ReelList } from "./kendra-admin-reel-panels";
+import { KendraAdminSiteContentForm } from "./kendra-admin-site-content-form";
 import { cn, labelText, shell } from "./ui";
 
-type AdminTab = "audio" | "account" | "storage";
+type AdminTab = "audio" | "account" | "pages" | "storage";
 type ReelMutationResponse = {
 	error?: string;
 	errors?: Record<string, string>;
@@ -31,6 +33,7 @@ type ReadyStorageFiles = Extract<KendraStorageFilesState, { status: "ready" }>;
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
 	{ id: "audio", label: "Audio" },
+	{ id: "pages", label: "Pages" },
 	{ id: "storage", label: "Storage" },
 	{ id: "account", label: "Account" },
 ];
@@ -675,6 +678,7 @@ function StoragePanel({
 }
 
 export function KendraAdminClient({
+	initialSiteContent,
 	initialReels,
 	sessionExpiresAt,
 	sessionRefreshEarlySeconds,
@@ -682,6 +686,7 @@ export function KendraAdminClient({
 	storageFiles,
 	userEmail,
 }: {
+	initialSiteContent: KendraEditableSiteContent;
 	initialReels: KendraAdminReel[];
 	sessionExpiresAt: string;
 	sessionRefreshEarlySeconds?: number;
@@ -855,6 +860,10 @@ export function KendraAdminClient({
 							</div>
 						</div>
 					</section>
+				) : null}
+
+				{activeTab === "pages" ? (
+					<KendraAdminSiteContentForm initialContent={initialSiteContent} />
 				) : null}
 
 				{activeTab === "storage" ? (

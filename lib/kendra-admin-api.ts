@@ -149,5 +149,9 @@ export async function getKendraAdminStudio(accessToken: string) {
 
 export function revalidateKendraContent() {
 	revalidatePath("/", "layout");
+	revalidatePath("/");
 	revalidatePath("/voice-over");
+	revalidatePath("/experience");
+	revalidatePath("/home-studio");
+	revalidatePath("/contact");
 }

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { clientLogos, notableClients } from "../content";
+import type { KendraContent } from "@/lib/kendra-content";
 import { cn, labelText, shell } from "./ui";
 
 const logoDelays = [
@@ -13,7 +13,13 @@ const logoDelays = [
 const logoCard =
 	"grid min-h-[110px] place-items-center rounded-2xl border border-white/15 bg-white/10 p-3 text-center font-black transition duration-200 animate-[logo-pop_560ms_ease_both] hover:-translate-y-1 hover:border-white/30 hover:bg-white/15";
 
-export function ClientStrip() {
+export function ClientStrip({
+	clientLogos,
+	notableClients,
+}: {
+	clientLogos: KendraContent["clientLogos"];
+	notableClients: KendraContent["notableClients"];
+}) {
 	return (
 		<section
 			className={cn(shell)}

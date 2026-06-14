@@ -11,6 +11,7 @@ import {
 	site,
 	studioSpecs,
 } from "../app/content";
+import { readKendraDeliverySiteContent } from "./kendra-admin-site-content-model";
 
 type JsonObject = Record<string, unknown>;
 
@@ -240,17 +241,20 @@ export function buildKendraContent(
 		return DEFAULT_KENDRA_CONTENT;
 	}
 
+	const editableContent =
+		readKendraDeliverySiteContent(delivery) ?? DEFAULT_KENDRA_CONTENT;
+
 	return {
-		availability,
-		bio,
-		clientLogos,
-		contactIntro,
+		availability: editableContent.availability,
+		bio: editableContent.bio,
+		clientLogos: editableContent.clientLogos,
+		contactIntro: editableContent.contactIntro,
 		demos: buildDemos(delivery, apiBaseUrl),
-		experienceGroups,
+		experienceGroups: editableContent.experienceGroups,
 		navigation,
-		notableClients,
-		performanceModes,
-		site,
-		studioSpecs,
+		notableClients: editableContent.notableClients,
+		performanceModes: editableContent.performanceModes,
+		site: editableContent.site,
+		studioSpecs: editableContent.studioSpecs,
 	};
 }

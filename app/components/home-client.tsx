@@ -70,7 +70,15 @@ const staggerContainer = {
 };
 
 export function HomeClient({ content }: { content: KendraContent }) {
-	const { bio, demos, performanceModes, site, studioSpecs } = content;
+	const {
+		bio,
+		clientLogos,
+		demos,
+		notableClients,
+		performanceModes,
+		site,
+		studioSpecs,
+	} = content;
 
 	return (
 		<main className="overflow-hidden bg-white selection:bg-accent selection:text-white">
@@ -213,7 +221,10 @@ export function HomeClient({ content }: { content: KendraContent }) {
 				viewport={{ once: true, margin: "-100px" }}
 				transition={{ duration: 1 }}
 			>
-				<ClientStrip />
+				<ClientStrip
+					clientLogos={clientLogos}
+					notableClients={notableClients}
+				/>
 			</motion.div>
 
 			{/* About Section */}

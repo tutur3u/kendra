@@ -1,6 +1,11 @@
 import {
 	demos,
 } from "../app/content";
+import {
+	DEFAULT_KENDRA_EDITABLE_SITE_CONTENT,
+	KENDRA_SITE_CONTENT_COLLECTION_SLUG,
+	KENDRA_SITE_CONTENT_ENTRY_SLUG,
+} from "./kendra-admin-site-content-model";
 
 type KendraSyncField = {
 	description?: string | null;
@@ -79,6 +84,16 @@ export const KENDRA_REEL_COLLECTION_SLUG = "voice-reels";
 
 const PUBLISHED_STATUS = "published" as const;
 
+const siteContentFields = [
+	{
+		description:
+			"Structured website copy and public page data managed from the Kendra admin dashboard.",
+		key: "content",
+		label: "Website content",
+		type: "json",
+	},
+] satisfies KendraSyncField[];
+
 const voiceReelFields = [
 	{ key: "category", label: "Category", type: "string" },
 	{ key: "downloadLabel", label: "Download label", type: "string" },
@@ -154,13 +169,36 @@ function voiceReelEntries() {
 	});
 }
 
+function siteContentEntry() {
+	return {
+		collectionSlug: KENDRA_SITE_CONTENT_COLLECTION_SLUG,
+		profileData: {
+			content: DEFAULT_KENDRA_EDITABLE_SITE_CONTENT,
+		},
+		slug: KENDRA_SITE_CONTENT_ENTRY_SLUG,
+		stableSourceId: "kendra:site-content",
+		status: PUBLISHED_STATUS,
+		subtitle: "Admin-managed page copy",
+		summary: "Editable public website content for Kendra Braun.",
+		title: "Website Content",
+	} satisfies KendraSyncEntry;
+}
+
 export const kendraExternalProjectManifest = {
 	adapter: "kendra",
 	content: {
-		entries: voiceReelEntries(),
+		entries: [siteContentEntry(), ...voiceReelEntries()],
 	},
 	schema: {
 		collections: [
+			{
+				collection_type: KENDRA_SITE_CONTENT_COLLECTION_SLUG,
+				description:
+					"Structured content for static public pages, edited from the admin dashboard.",
+				profileFields: siteContentFields,
+				slug: KENDRA_SITE_CONTENT_COLLECTION_SLUG,
+				title: "Site Content",
+			},
 			{
 				assetTypes: ["audio"],
 				blockTypes: ["markdown"],
