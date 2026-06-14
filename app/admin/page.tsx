@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { KendraAdminClient } from "../components/kendra-admin-client";
 import { KendraAdminLoginPanel } from "../components/kendra-admin-login-panel";
 import { getKendraCentralizedLoginHref } from "./login-link";
-import { resolveKendraAdminTargetKey } from "@/lib/kendra-config";
+import {
+	getKendraTuturuuuDrivePathPrefix,
+	getKendraTuturuuuDriveUrl,
+	getKendraTuturuuuMembersUrl,
+	resolveKendraAdminTargetKey,
+} from "@/lib/kendra-config";
 import {
 	getKendraAdminSessionReadState,
 	getKendraAdminStudio,
@@ -58,6 +63,9 @@ export default async function AdminPage({
 			initialReels={readKendraAdminReels(studio)}
 			sessionExpiresAt={session.expiresAt}
 			sessionRefreshEarlySeconds={session.refreshEarlySeconds}
+			tuturuuuDrivePathPrefix={getKendraTuturuuuDrivePathPrefix()}
+			tuturuuuDriveUrl={getKendraTuturuuuDriveUrl()}
+			tuturuuuMembersUrl={getKendraTuturuuuMembersUrl()}
 			userEmail={session.user.email}
 		/>
 	);

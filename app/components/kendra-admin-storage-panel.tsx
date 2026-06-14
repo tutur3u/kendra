@@ -95,6 +95,37 @@ function storageParentPath(path: string) {
 	return segments.join("/");
 }
 
+function joinStoragePath(...parts: Array<string | null | undefined>) {
+	return parts
+		.flatMap((part) => part?.split("/") ?? [])
+		.map((part) => part.trim())
+		.filter(Boolean)
+		.join("/");
+}
+
+function buildTuturuuuDriveUrl({
+	baseUrl,
+	path,
+	prefix,
+}: {
+	baseUrl: string;
+	path?: string;
+	prefix: string;
+}) {
+	try {
+		const url = new URL(baseUrl);
+		const drivePath = joinStoragePath(prefix, path);
+
+		if (drivePath) {
+			url.searchParams.set("path", drivePath);
+		}
+
+		return url.toString();
+	} catch {
+		return baseUrl;
+	}
+}
+
 function isStorageFilesPayload(
 	value: unknown,
 ): value is ReadyStorageFiles["data"] {
@@ -121,6 +152,7 @@ function StorageFileRow({
 	busy,
 	confirmDeletePath,
 	item,
+	tuturuuuDriveHref,
 	onDelete,
 	onOpen,
 	onOpenFolder,
@@ -134,6 +166,7 @@ function StorageFileRow({
 	busy: boolean;
 	confirmDeletePath: string | null;
 	item: KendraStorageFileItem;
+	tuturuuuDriveHref: string;
 	onDelete: (item: KendraStorageFileItem) => void;
 	onOpen: (item: KendraStorageFileItem) => void;
 	onOpenFolder: (path: string) => void;
@@ -183,6 +216,16 @@ function StorageFileRow({
 					>
 						Open
 					</button>
+				) : null}
+				{!isRenaming && !isConfirmingDelete ? (
+					<a
+						className="inline-flex min-h-10 items-center border border-line bg-white px-4 font-bold text-ink text-xs uppercase tracking-[0.1em] transition hover:border-accent hover:text-accent"
+						href={tuturuuuDriveHref}
+						rel="noreferrer"
+						target="_blank"
+					>
+						View in Drive
+					</a>
 				) : null}
 				{isRenaming ? (
 					<>
@@ -272,8 +315,12 @@ function StorageLoadingPanel() {
 
 export function KendraAdminStoragePanel({
 	onResourcesChanged,
+	tuturuuuDrivePathPrefix,
+	tuturuuuDriveUrl,
 }: {
 	onResourcesChanged: () => Promise<void>;
+	tuturuuuDrivePathPrefix: string;
+	tuturuuuDriveUrl: string;
 }) {
 	const [analyticsState, setAnalyticsState] =
 		useState<KendraStorageAnalyticsState | null>(null);
@@ -504,6 +551,11 @@ export function KendraAdminStoragePanel({
 		: 0;
 	const files = filesState?.status === "ready" ? filesState.data.items : [];
 	const pathLabel = currentPath || "Main room";
+	const currentDriveHref = buildTuturuuuDriveUrl({
+		baseUrl: tuturuuuDriveUrl,
+		path: currentPath,
+		prefix: tuturuuuDrivePathPrefix,
+	});
 
 	return (
 		<section className="grid gap-4 lg:grid-cols-3">
@@ -518,9 +570,19 @@ export function KendraAdminStoragePanel({
 									Track and manage the files connected to this admin account.
 								</p>
 							</div>
-							<strong className="text-4xl font-semibold text-accent">
-								{usagePercentage.toFixed(usagePercentage % 1 === 0 ? 0 : 1)}%
-							</strong>
+							<div className="flex flex-wrap items-center gap-3 md:justify-end">
+								<a
+									className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 font-bold text-white text-xs uppercase tracking-[0.1em] transition hover:bg-accent"
+									href={currentDriveHref}
+									rel="noreferrer"
+									target="_blank"
+								>
+									View on Tuturuuu
+								</a>
+								<strong className="text-4xl font-semibold text-accent">
+									{usagePercentage.toFixed(usagePercentage % 1 === 0 ? 0 : 1)}%
+								</strong>
+							</div>
 						</div>
 						<div className="mt-6 h-3 overflow-hidden border border-line bg-surface">
 							<div
@@ -560,6 +622,14 @@ export function KendraAdminStoragePanel({
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-2">
+						<a
+							className="inline-flex min-h-10 items-center border border-line bg-white px-4 font-bold text-ink text-xs uppercase tracking-[0.1em] transition hover:border-accent hover:text-accent"
+							href={currentDriveHref}
+							rel="noreferrer"
+							target="_blank"
+						>
+							View on Tuturuuu
+						</a>
 						{currentPath ? (
 							<button
 								className="min-h-10 border border-line bg-white px-4 font-bold text-ink text-xs uppercase tracking-[0.1em] transition hover:border-accent hover:text-accent"
@@ -645,6 +715,11 @@ export function KendraAdminStoragePanel({
 								confirmDeletePath={confirmDeletePath}
 								item={item}
 								key={item.path}
+								tuturuuuDriveHref={buildTuturuuuDriveUrl({
+									baseUrl: tuturuuuDriveUrl,
+									path: item.path,
+									prefix: tuturuuuDrivePathPrefix,
+								})}
 								onDelete={deleteItem}
 								onOpen={(file) => void openFile(file)}
 								onOpenFolder={(path) => void refreshStorage(path)}

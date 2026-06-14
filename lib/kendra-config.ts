@@ -94,6 +94,22 @@ export function getKendraWebAppUrl() {
 	});
 }
 
+function getKendraWorkspaceAppUrl(path: string) {
+	return `${getKendraWebAppUrl()}/${encodeURIComponent(getKendraWorkspaceId())}/${path}`;
+}
+
+export function getKendraTuturuuuDriveUrl() {
+	return getKendraWorkspaceAppUrl("drive");
+}
+
+export function getKendraTuturuuuMembersUrl() {
+	return getKendraWorkspaceAppUrl("members");
+}
+
+export function getKendraTuturuuuDrivePathPrefix() {
+	return `external-projects/${getKendraAppId()}`;
+}
+
 export function getKendraAppBaseUrl(requestOrigin?: string) {
 	const configured =
 		process.env.KENDRA_APP_URL ??

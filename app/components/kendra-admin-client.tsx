@@ -17,7 +17,7 @@ import { KendraAdminReelForm } from "./kendra-admin-reel-form";
 import { ReelList } from "./kendra-admin-reel-panels";
 import { cn, labelText, shell } from "./ui";
 
-type AdminTab = "audio" | "account" | "pages" | "storage";
+type AdminTab = "audio" | "account" | "members" | "pages" | "storage";
 type ReelMutationResponse = {
 	error?: string;
 	errors?: Record<string, string>;
@@ -29,6 +29,7 @@ const tabs: Array<{ id: AdminTab; label: string }> = [
 	{ id: "audio", label: "Audio" },
 	{ id: "pages", label: "Pages" },
 	{ id: "storage", label: "Storage" },
+	{ id: "members", label: "Members" },
 	{ id: "account", label: "Account" },
 ];
 
@@ -77,6 +78,18 @@ const LazyStoragePanel = dynamic(
 	},
 );
 
+const LazyMembersPanel = dynamic(
+	() =>
+		import("./kendra-admin-members-panel").then(
+			(module) => module.KendraAdminMembersPanel,
+		),
+	{
+		loading: () => (
+			<AdminTabLoading label="Members" text="Loading workspace members..." />
+		),
+	},
+);
+
 function getInitials(email: string | null) {
 	if (!email) return "KB";
 
@@ -97,11 +110,17 @@ export function KendraAdminClient({
 	initialReels,
 	sessionExpiresAt,
 	sessionRefreshEarlySeconds,
+	tuturuuuDrivePathPrefix,
+	tuturuuuDriveUrl,
+	tuturuuuMembersUrl,
 	userEmail,
 }: {
 	initialReels: KendraAdminReel[];
 	sessionExpiresAt: string;
 	sessionRefreshEarlySeconds?: number;
+	tuturuuuDrivePathPrefix: string;
+	tuturuuuDriveUrl: string;
+	tuturuuuMembersUrl: string;
 	userEmail: string | null;
 }) {
 	const [activeTab, setActiveTab] = useState<AdminTab>("audio");
@@ -285,7 +304,15 @@ export function KendraAdminClient({
 				{activeTab === "pages" ? <LazyPagesPanel /> : null}
 
 				{activeTab === "storage" ? (
-					<LazyStoragePanel onResourcesChanged={refreshReels} />
+					<LazyStoragePanel
+						onResourcesChanged={refreshReels}
+						tuturuuuDrivePathPrefix={tuturuuuDrivePathPrefix}
+						tuturuuuDriveUrl={tuturuuuDriveUrl}
+					/>
+				) : null}
+
+				{activeTab === "members" ? (
+					<LazyMembersPanel manageMembersUrl={tuturuuuMembersUrl} />
 				) : null}
 
 				{activeTab === "account" ? (
