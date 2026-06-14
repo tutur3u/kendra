@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { KendraAdminSession } from "./kendra-session";
 
 let sessionCookieValue: string | null = null;
@@ -246,5 +246,51 @@ describe("Kendra session validation", () => {
 			refreshToken: "refresh-token",
 			workspaceId: "ws-linked",
 		});
+	});
+
+	test("refresh route redirects with a rotated cookie for browser navigation", async () => {
+		const { setKendraSessionCookie } = await import("./kendra-session");
+		const { GET } = await import("../app/api/auth/session/refresh/route");
+		const response = NextResponse.json({});
+		setKendraSessionCookie(
+			response,
+			createSession({
+				expiresAt: new Date(Date.now() - 1_000).toISOString(),
+				refreshEarlySeconds: 900,
+				refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+				refreshToken: "refresh-token",
+			}),
+		);
+		sessionCookieValue = readSessionCookieValue(response);
+
+		globalThis.fetch = (async (input) => {
+			if (String(input).endsWith("/auth/app-token/exchange")) {
+				return Response.json({
+					accessToken: "new-app-token",
+					app: { name: "kendra" },
+					expiresAt: new Date(Date.now() + 60_000).toISOString(),
+					refreshEarlySeconds: 900,
+					refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+					refreshToken: "new-refresh-token",
+					tokenType: "Bearer",
+					user: { email: "admin@example.com", id: "user-1" },
+					workspaceId: "ws-linked",
+				});
+			}
+
+			return Response.json({ ok: true });
+		}) as typeof fetch;
+
+		const refreshResponse = await GET(
+			new NextRequest(
+				"http://localhost/api/auth/session/refresh?nextUrl=/admin",
+			),
+		);
+
+		expect(refreshResponse.status).toBe(307);
+		expect(refreshResponse.headers.get("location")).toBe("http://localhost/admin");
+		expect(refreshResponse.headers.get("set-cookie")).toContain(
+			"kendra_admin_session=",
+		);
 	});
 });

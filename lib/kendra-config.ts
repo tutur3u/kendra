@@ -155,7 +155,7 @@ export function buildKendraCentralizedLoginUrl({
 	webAppUrl?: string;
 }) {
 	const appOrigin = new URL(appBaseUrl).origin;
-	const verifyUrl = new URL("/verify-token", appOrigin);
+	const verifyUrl = new URL("/api/auth/verify-app-token", appOrigin);
 	verifyUrl.searchParams.set("nextUrl", sanitizeKendraNextPath(nextUrl, appOrigin));
 
 	const loginUrl = new URL("/login", webAppUrl);

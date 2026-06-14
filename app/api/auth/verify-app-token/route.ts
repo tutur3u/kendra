@@ -3,6 +3,7 @@ import {
 	getKendraAppId,
 	getKendraAppSecret,
 	getKendraWorkspaceId,
+	sanitizeKendraNextPath,
 } from "@/lib/kendra-config";
 import {
 	createKendraSessionFromExchangePayload,
@@ -57,6 +58,60 @@ async function exchangeCrossAppToken(token: string) {
 	}
 
 	return (await response.json()) as KendraAppTokenExchangeResponse;
+}
+
+function getVerifiedNextPath(request: NextRequest) {
+	return sanitizeKendraNextPath(
+		request.nextUrl.searchParams.get("nextUrl"),
+		request.nextUrl.origin,
+		"/admin",
+	);
+}
+
+function createVerificationFailureRedirect(
+	request: NextRequest,
+	error: unknown,
+	status = 500,
+) {
+	const failureUrl = new URL("/verify-token", request.nextUrl.origin);
+	failureUrl.searchParams.set(
+		"error",
+		error instanceof Error ? error.message : "Token verification failed.",
+	);
+	failureUrl.searchParams.set("status", String(status));
+	failureUrl.searchParams.set("nextUrl", getVerifiedNextPath(request));
+	return NextResponse.redirect(failureUrl);
+}
+
+export async function GET(request: NextRequest) {
+	try {
+		const token = request.nextUrl.searchParams.get("token")?.trim() ?? "";
+
+		if (!token) {
+			return createVerificationFailureRedirect(
+				request,
+				new Error("Missing required parameter: token"),
+				400,
+			);
+		}
+
+		const session = createKendraSessionFromExchangePayload(
+			await exchangeCrossAppToken(token),
+		);
+		const response = NextResponse.redirect(
+			new URL(getVerifiedNextPath(request), request.nextUrl.origin),
+		);
+
+		setKendraSessionCookie(response, session);
+		return response;
+	} catch (error) {
+		console.error("[kendra:auth] app token exchange failed", error);
+		return createVerificationFailureRedirect(
+			request,
+			error,
+			error instanceof TokenExchangeError ? error.status : 500,
+		);
+	}
 }
 
 export async function POST(request: NextRequest) {

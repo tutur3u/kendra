@@ -2,9 +2,34 @@ import {
 	refreshKendraSessionFromCookies,
 	setKendraSessionCookie,
 } from "@/lib/kendra-session";
-import { NextResponse } from "next/server";
+import { sanitizeKendraNextPath } from "@/lib/kendra-config";
+import { type NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+
+function readRefreshNextPath(request: NextRequest) {
+	return sanitizeKendraNextPath(
+		request.nextUrl.searchParams.get("nextUrl"),
+		request.nextUrl.origin,
+		"/admin",
+	);
+}
+
+export async function GET(request: NextRequest) {
+	const session = await refreshKendraSessionFromCookies();
+
+	if (!session) {
+		return NextResponse.redirect(
+			new URL("/admin/login?next=dashboard", request.nextUrl.origin),
+		);
+	}
+
+	const response = NextResponse.redirect(
+		new URL(readRefreshNextPath(request), request.nextUrl.origin),
+	);
+	setKendraSessionCookie(response, session);
+	return response;
+}
 
 export async function POST() {
 	const session = await refreshKendraSessionFromCookies();

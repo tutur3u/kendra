@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { KendraAdminClient } from "../components/kendra-admin-client";
 import { KendraAdminLoginPanel } from "../components/kendra-admin-login-panel";
-import { KendraAdminSessionRestorer } from "../components/kendra-admin-session-restorer";
 import { getKendraCentralizedLoginHref } from "./login-link";
 import { resolveKendraAdminTargetKey } from "@/lib/kendra-config";
 import {
@@ -42,7 +42,9 @@ export default async function AdminPage({
 	}
 
 	if (sessionState.status === "refreshable") {
-		return <KendraAdminSessionRestorer loginHref={loginHref} />;
+		redirect(
+			`/api/auth/session/refresh?nextUrl=${encodeURIComponent("/admin")}`,
+		);
 	}
 
 	const { session } = sessionState;
