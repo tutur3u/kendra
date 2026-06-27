@@ -21,6 +21,14 @@ const ensureKendraAdminSiteContentEntry = mock(async () => ({
   content: null,
   entryId: "entry-1",
 }));
+const uploadKendraExternalProjectAssetFile = mock(async () => ({
+  contentType: "image/png",
+  filename: "site-heroimage-hero.png",
+  fullPath:
+    "ws-1/external-projects/kendra/site-content/site-content/site-heroimage-hero.png",
+  path: "external-projects/kendra/site-content/site-content/site-heroimage-hero.png",
+  provider: "supabase",
+}));
 let hasSession = true;
 
 mock.module("@/lib/kendra-admin-api", () => ({
@@ -42,6 +50,7 @@ mock.module("@/lib/kendra-admin-api", () => ({
     createAssetUploadUrl,
     getAssetUrl,
   }),
+  uploadKendraExternalProjectAssetFile,
 }));
 
 mock.module("@/lib/kendra-admin-route-session", () => ({
@@ -82,12 +91,40 @@ function createRequest(body: Record<string, unknown>) {
   );
 }
 
+function createMultipartRequest({
+  contentType = "image/png",
+  fieldKey = "site.heroImage",
+  file = new File(["image"], "Hero.png", { type: "image/png" }),
+}: {
+  contentType?: string;
+  fieldKey?: string;
+  file?: File;
+} = {}) {
+  const formData = new FormData();
+  formData.set("contentType", contentType);
+  formData.set("fieldKey", fieldKey);
+  formData.set("file", file);
+  const request = new Request(
+    "http://localhost/api/admin/site-content/image-upload-url",
+    {
+      headers: { "Content-Type": "multipart/form-data; boundary=test" },
+      method: "POST",
+    },
+  );
+  Object.defineProperty(request, "formData", {
+    value: mock(async () => formData),
+  });
+
+  return request;
+}
+
 describe("Kendra site image upload URL route", () => {
   beforeEach(() => {
     createAsset.mockClear();
     createAssetUploadUrl.mockClear();
     ensureKendraAdminSiteContentEntry.mockClear();
     getAssetUrl.mockClear();
+    uploadKendraExternalProjectAssetFile.mockClear();
     hasSession = true;
   });
 
@@ -122,6 +159,35 @@ describe("Kendra site image upload URL route", () => {
       size: 5,
       upsert: true,
     });
+  });
+
+  test("uploads managed images through the server fallback when direct upload is required", async () => {
+    const response = await POST(createMultipartRequest());
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({
+      contentType: "image/png",
+      directUpload: true,
+      filename: "site-heroimage-hero.png",
+      fullPath:
+        "ws-1/external-projects/kendra/site-content/site-content/site-heroimage-hero.png",
+      path: "external-projects/kendra/site-content/site-content/site-heroimage-hero.png",
+      provider: "supabase",
+    });
+    expect(uploadKendraExternalProjectAssetFile).toHaveBeenCalledWith(
+      "app-token",
+      "ws-1",
+      expect.any(File),
+      {
+        collectionType: "site-content",
+        contentType: "image/png",
+        entrySlug: "site-content",
+        filename: "site-heroimage-hero.png",
+        upsert: true,
+      },
+    );
+    expect(createAssetUploadUrl).not.toHaveBeenCalled();
   });
 
   test("finalizes uploaded images as stable public asset URLs", async () => {

@@ -50,6 +50,7 @@ type SiteContentMutationResponse = {
 };
 type SiteImageUploadResponse = {
   assetUrl?: string;
+  directUpload?: boolean;
   error?: string;
   errors?: Record<string, string>;
   fullPath?: string | null;
@@ -59,6 +60,9 @@ type SiteImageUploadResponse = {
   previewUrl?: string;
   signedUrl?: string;
 };
+
+const DIRECT_UPLOAD_REQUIRED_ERROR =
+  "Direct upload is required for Supabase-backed external assets.";
 
 function isImageUploadRunning(state: SiteImageUploadState | undefined) {
   return (
@@ -381,6 +385,43 @@ export function KendraAdminSiteContentForm({
     setImageUploads((current) => ({ ...current, [fieldKey]: state }));
   };
 
+  const isDirectUploadRequired = (
+    response: Response,
+    payload: SiteImageUploadResponse,
+  ) => response.status === 409 && payload.error === DIRECT_UPLOAD_REQUIRED_ERROR;
+
+  const uploadSiteImageThroughApp = async ({
+    fieldKey,
+    file,
+  }: {
+    fieldKey: string;
+    file: File;
+  }) => {
+    const formData = new FormData();
+    formData.set("contentType", file.type || "");
+    formData.set("fieldKey", fieldKey);
+    formData.set("file", file, file.name);
+
+    const response = await adminFetch(
+      "/api/admin/site-content/image-upload-url",
+      {
+        body: formData,
+        method: "POST",
+      },
+    );
+    const payload = (await response
+      .json()
+      .catch(() => ({}))) as SiteImageUploadResponse;
+
+    if (!response.ok || !payload.path) {
+      throw new Error(
+        readPayloadError(payload, "We could not upload the image."),
+      );
+    }
+
+    return payload;
+  };
+
   const uploadSiteImage = async ({
     fieldKey,
     file,
@@ -431,47 +472,65 @@ export function KendraAdminSiteContentForm({
         .json()
         .catch(() => ({}))) as SiteImageUploadResponse;
 
+      let uploadedPath = preparePayload.path;
+
       if (
-        !prepareResponse.ok ||
-        !preparePayload.signedUrl ||
-        !preparePayload.path ||
-        !preparePayload.headers
+        !prepareResponse.ok &&
+        isDirectUploadRequired(prepareResponse, preparePayload)
       ) {
-        throw new Error(
-          readPayloadError(
-            preparePayload,
-            "We could not prepare the image upload.",
-          ),
-        );
-      }
+        setImageUploadState(fieldKey, {
+          label,
+          previewUrl,
+          status: "uploading",
+        });
+        const directPayload = await uploadSiteImageThroughApp({
+          fieldKey,
+          file,
+        });
+        uploadedPath = directPayload.path;
+      } else {
+        if (
+          !prepareResponse.ok ||
+          !preparePayload.signedUrl ||
+          !preparePayload.path ||
+          !preparePayload.headers
+        ) {
+          throw new Error(
+            readPayloadError(
+              preparePayload,
+              "We could not prepare the image upload.",
+            ),
+          );
+        }
 
-      setImageUploadState(fieldKey, {
-        label,
-        previewUrl,
-        status: "uploading",
-      });
-      let uploadResponse = await fetch(preparePayload.signedUrl, {
-        body: file,
-        cache: "no-store",
-        headers: preparePayload.headers,
-        method: preparePayload.method ?? "PUT",
-      });
-
-      if (!uploadResponse.ok && "Content-Type" in preparePayload.headers) {
-        const fallbackHeaders = { ...preparePayload.headers };
-        delete fallbackHeaders["Content-Type"];
-        uploadResponse = await fetch(preparePayload.signedUrl, {
+        setImageUploadState(fieldKey, {
+          label,
+          previewUrl,
+          status: "uploading",
+        });
+        let uploadResponse = await fetch(preparePayload.signedUrl, {
           body: file,
           cache: "no-store",
-          headers: fallbackHeaders,
+          headers: preparePayload.headers,
           method: preparePayload.method ?? "PUT",
         });
-      }
 
-      if (!uploadResponse.ok) {
-        throw new Error(
-          `Image upload failed with status ${uploadResponse.status}.`,
-        );
+        if (!uploadResponse.ok && "Content-Type" in preparePayload.headers) {
+          const fallbackHeaders = { ...preparePayload.headers };
+          delete fallbackHeaders["Content-Type"];
+          uploadResponse = await fetch(preparePayload.signedUrl, {
+            body: file,
+            cache: "no-store",
+            headers: fallbackHeaders,
+            method: preparePayload.method ?? "PUT",
+          });
+        }
+
+        if (!uploadResponse.ok) {
+          throw new Error(
+            `Image upload failed with status ${uploadResponse.status}.`,
+          );
+        }
       }
 
       setImageUploadState(fieldKey, {
@@ -486,7 +545,7 @@ export function KendraAdminSiteContentForm({
             contentType: file.type || null,
             fieldKey,
             filename: file.name,
-            path: preparePayload.path,
+            path: uploadedPath,
             phase: "finalize",
             size: file.size,
           }),

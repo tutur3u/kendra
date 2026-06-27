@@ -15,6 +15,14 @@ export type KendraSignedAssetUploadUrl = Awaited<
 	token?: string | null;
 };
 
+export type KendraDirectAssetUploadResult = {
+	contentType?: string | null;
+	filename?: string | null;
+	fullPath?: string | null;
+	path: string;
+	provider?: string | null;
+};
+
 export type KendraAdminStudioPayload = {
 	assets: Array<Record<string, unknown>>;
 	binding?: Record<string, unknown>;
@@ -132,6 +140,71 @@ export function createKendraExternalProjectsClient(accessToken: string) {
 	};
 
 	return client;
+}
+
+function readUploadResultPayload(payload: unknown): KendraDirectAssetUploadResult {
+	if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+		throw new Error("Missing upload result payload");
+	}
+
+	const record = payload as Record<string, unknown>;
+	const path = typeof record.path === "string" ? record.path : "";
+
+	if (!path) {
+		throw new Error("Missing upload result payload");
+	}
+
+	return {
+		contentType:
+			typeof record.contentType === "string" ? record.contentType : null,
+		filename: typeof record.filename === "string" ? record.filename : null,
+		fullPath: typeof record.fullPath === "string" ? record.fullPath : null,
+		path,
+		provider: typeof record.provider === "string" ? record.provider : null,
+	};
+}
+
+export async function uploadKendraExternalProjectAssetFile(
+	accessToken: string,
+	workspaceId: string,
+	file: File,
+	payload: {
+		collectionType: string;
+		contentType: string;
+		entrySlug: string;
+		filename: string;
+		upsert?: boolean;
+	},
+) {
+	const apiBaseUrl = getKendraApiBaseUrl().replace(/\/+$/, "");
+	const formData = new FormData();
+	const uploadBlob = new Blob([await file.arrayBuffer()], {
+		type: file.type || payload.contentType,
+	});
+	formData.set("collectionType", payload.collectionType);
+	formData.set("contentType", payload.contentType);
+	formData.set("entrySlug", payload.entrySlug);
+	formData.set("file", uploadBlob, payload.filename);
+
+	if (payload.upsert !== undefined) {
+		formData.set("upsert", String(payload.upsert));
+	}
+
+	const response = await kendraExternalProjectFetch(
+		`${apiBaseUrl}/workspaces/${encodeURIComponent(workspaceId)}/external-projects/assets/upload-url`,
+		{
+			body: formData,
+			cache: "no-store",
+			headers: {
+				Accept: "application/json",
+				Authorization: `Bearer ${accessToken}`,
+			},
+			method: "POST",
+		},
+	);
+	const result = await readResponsePayload(response);
+
+	return readUploadResultPayload(result);
 }
 
 export async function getKendraAdminSession() {

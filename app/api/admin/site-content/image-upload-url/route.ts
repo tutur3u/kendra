@@ -1,6 +1,7 @@
 import {
   buildKendraSignedUploadHeaders,
   createKendraExternalProjectsClient,
+  uploadKendraExternalProjectAssetFile,
   type KendraSignedAssetUploadUrl,
 } from "@/lib/kendra-admin-api";
 import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
@@ -78,6 +79,11 @@ async function readJsonBody(request: Request) {
   }
 }
 
+function getFormString(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
 async function prepareUploadUrl({
   body,
   sessionAccessToken,
@@ -111,6 +117,61 @@ async function prepareUploadUrl({
     method: "PUT",
     path: uploadUrl.path,
     signedUrl: uploadUrl.signedUrl,
+  });
+}
+
+async function uploadImageDirectly({
+  request,
+  sessionAccessToken,
+}: {
+  request: Request;
+  sessionAccessToken: string;
+}) {
+  const formData = await request.formData();
+  const file = formData.get("file");
+  const fieldKey = getFormString(formData, "fieldKey");
+  const errors: Record<string, string> = {};
+
+  if (!(file instanceof File)) {
+    errors.filename = "Choose an image file.";
+    return NextResponse.json({ errors }, { status: 400 });
+  }
+
+  const { contentType, errors: metadataErrors, filename, size } =
+    validateImageMetadata({
+      contentType: file.type || getFormString(formData, "contentType"),
+      fieldKey,
+      filename: file.name,
+      size: file.size,
+    });
+
+  Object.assign(errors, metadataErrors);
+
+  if (Object.keys(errors).length > 0 || !size) {
+    return NextResponse.json({ errors }, { status: 400 });
+  }
+
+  const preparedFilename = prepareKendraSiteImageFilename(fieldKey, filename);
+  const uploaded = await uploadKendraExternalProjectAssetFile(
+    sessionAccessToken,
+    getKendraWorkspaceId(),
+    file,
+    {
+      collectionType: KENDRA_SITE_CONTENT_COLLECTION_SLUG,
+      contentType: contentType || "application/octet-stream",
+      entrySlug: KENDRA_SITE_CONTENT_ENTRY_SLUG,
+      filename: preparedFilename,
+      upsert: true,
+    },
+  );
+
+  return NextResponse.json({
+    contentType: uploaded.contentType ?? contentType,
+    directUpload: true,
+    filename: uploaded.filename ?? preparedFilename,
+    fullPath: uploaded.fullPath ?? null,
+    path: uploaded.path,
+    provider: uploaded.provider ?? null,
   });
 }
 
@@ -185,6 +246,25 @@ export async function POST(request: Request) {
 
   if (!auth.session) {
     return auth.response;
+  }
+
+  const requestContentType = request.headers.get("content-type") ?? "";
+
+  if (requestContentType.toLowerCase().includes("multipart/form-data")) {
+    try {
+      const response = await uploadImageDirectly({
+        request,
+        sessionAccessToken: auth.session.accessToken,
+      });
+      return auth.withSessionCookie(response);
+    } catch (error) {
+      return auth.withSessionCookie(
+        createKendraAdminErrorResponse(error, "Image upload failed", {
+          label: "Uploading image",
+          step: "site-image-upload",
+        }),
+      );
+    }
   }
 
   const body = await readJsonBody(request);
