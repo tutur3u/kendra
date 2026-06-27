@@ -61,8 +61,8 @@ describe("Kendra admin site content model", () => {
     expect(result.content.site.resumeUrl).toBe("https://example.com/resume");
   });
 
-  test("rejects invalid admin save payloads with field errors", () => {
-    const { content, errors } = parseKendraEditableSiteContentPayload({
+	test("rejects invalid admin save payloads with field errors", () => {
+		const { content, errors } = parseKendraEditableSiteContentPayload({
       content: {
         ...DEFAULT_KENDRA_EDITABLE_SITE_CONTENT,
         clientLogos: [
@@ -103,10 +103,50 @@ describe("Kendra admin site content model", () => {
       "Use a public path or full image URL.",
     );
     expect(errors["site.email"]).toBe("Enter a valid email address.");
-    expect(errors["site.resumeUrl"]).toBe("Enter a full resume URL.");
-  });
+		expect(errors["site.resumeUrl"]).toBe("Enter a full resume URL.");
+	});
 
-  test("ignores unpublished delivery site content", () => {
+	test("allows empty managed image fields while validating non-empty values", () => {
+		const { content, errors } = parseKendraEditableSiteContentPayload({
+			content: {
+				...DEFAULT_KENDRA_EDITABLE_SITE_CONTENT,
+				clientLogos: [
+					{
+						image: "",
+						name: "Client",
+					},
+				],
+				experienceGroups: [
+					{
+						items: [
+							{
+								project: "Project",
+								role: "Role",
+								visual: {
+									image: "",
+								},
+							},
+						],
+						title: "Credits",
+					},
+				],
+				site: {
+					...DEFAULT_KENDRA_EDITABLE_SITE_CONTENT.site,
+					clientProofImage: "",
+					heroImage: "",
+					heroImageAlt: "",
+				},
+			},
+		});
+
+		expect(errors).toEqual({});
+		expect(content?.site.heroImage).toBe("");
+		expect(content?.site.clientProofImage).toBe("");
+		expect(content?.clientLogos[0]?.image).toBe("");
+		expect(content?.experienceGroups[0]?.items[0]?.visual.image).toBeUndefined();
+	});
+
+	test("ignores unpublished delivery site content", () => {
     expect(
       readKendraDeliverySiteContent({
         adapter: "kendra",

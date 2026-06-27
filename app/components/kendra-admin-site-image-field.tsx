@@ -2,7 +2,10 @@
 
 import { useId, useRef } from "react";
 import { FieldError } from "./kendra-admin-reel-form-fields";
-import { secondaryButton } from "./kendra-admin-site-content-fields";
+import {
+  dangerButton,
+  secondaryButton,
+} from "./kendra-admin-site-content-fields";
 import { cn } from "./ui";
 
 export type SiteImageUploadState = {
@@ -13,10 +16,18 @@ export type SiteImageUploadState = {
 };
 
 export type SiteImageUploadRequest = {
+  currentValue: string;
   fieldKey: string;
   file: File;
   label: string;
   onUploaded: (value: string) => void;
+};
+
+export type SiteImageRemovalRequest = {
+  fieldKey: string;
+  label: string;
+  onRemoved: () => void;
+  value: string;
 };
 
 function getStatusText(state?: SiteImageUploadState) {
@@ -34,6 +45,7 @@ export function SiteImageField({
   error,
   fieldKey,
   label,
+  onRemove,
   onUpload,
   onUploaded,
   previewAlt,
@@ -43,6 +55,7 @@ export function SiteImageField({
   error?: string;
   fieldKey: string;
   label: string;
+  onRemove: (request: SiteImageRemovalRequest) => void;
   onUpload: (request: SiteImageUploadRequest) => void;
   onUploaded: (value: string) => void;
   previewAlt?: string;
@@ -67,14 +80,31 @@ export function SiteImageField({
         >
           {label}
         </label>
-        <button
-          className={secondaryButton}
-          disabled={isBusy}
-          onClick={() => inputRef.current?.click()}
-          type="button"
-        >
-          {isBusy ? "Replacing" : "Replace image"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className={secondaryButton}
+            disabled={isBusy}
+            onClick={() => inputRef.current?.click()}
+            type="button"
+          >
+            {isBusy ? "Replacing" : "Replace image"}
+          </button>
+          <button
+            className={dangerButton}
+            disabled={isBusy || !value}
+            onClick={() =>
+              onRemove({
+                fieldKey,
+                label,
+                onRemoved: () => onUploaded(""),
+                value,
+              })
+            }
+            type="button"
+          >
+            Remove image
+          </button>
+        </div>
       </div>
       <div
         className={cn(
@@ -106,14 +136,6 @@ export function SiteImageField({
             </div>
           ) : null}
         </div>
-        <div className="grid gap-1">
-          <span className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-ink-soft">
-            Current image
-          </span>
-          <code className="break-all border border-line bg-surface px-2 py-2 text-ink-soft text-xs">
-            {value || "No image path saved yet."}
-          </code>
-        </div>
         {statusText ? (
           <p
             aria-live="polite"
@@ -137,6 +159,7 @@ export function SiteImageField({
           if (!file) return;
 
           onUpload({
+            currentValue: value,
             fieldKey,
             file,
             label,

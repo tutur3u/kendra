@@ -82,6 +82,15 @@ function readOptionalString(record: JsonObject, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function readImageReference(
+  record: JsonObject,
+  key: string,
+  fallback: string,
+) {
+  const value = record[key];
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
 function normalizeStringArray(
   value: unknown,
   fallback: string[],
@@ -105,15 +114,14 @@ function normalizeSite(value: unknown, options: NormalizeOptions) {
   const fallback = DEFAULT_KENDRA_EDITABLE_SITE_CONTENT.site;
 
   return {
-    clientProofImage: readString(
+    clientProofImage: readImageReference(
       record,
       "clientProofImage",
       fallback.clientProofImage,
-      options,
     ),
     email: readString(record, "email", fallback.email, options),
     gvaaUrl: readString(record, "gvaaUrl", fallback.gvaaUrl, options),
-    heroImage: readString(record, "heroImage", fallback.heroImage, options),
+    heroImage: readImageReference(record, "heroImage", fallback.heroImage),
     heroImageAlt: readString(
       record,
       "heroImageAlt",
@@ -310,9 +318,6 @@ export function validateKendraEditableSiteContent(
     ["resumeUrl", "Resume URL"],
     ["gvaaUrl", "GVAA URL"],
     ["location", "Location"],
-    ["heroImage", "Hero image"],
-    ["heroImageAlt", "Hero image alt text"],
-    ["clientProofImage", "Client proof image"],
   ];
 
   for (const [key, label] of siteLabels) {
@@ -338,6 +343,15 @@ export function validateKendraEditableSiteContent(
     if (content.site[key] && !isValidImageReference(content.site[key])) {
       errors[`site.${key}`] = "Use a public path or full image URL.";
     }
+  }
+
+  if (content.site.heroImage) {
+    addRequiredError(
+      errors,
+      "site.heroImageAlt",
+      content.site.heroImageAlt,
+      "Hero image alt text",
+    );
   }
 
   addRequiredError(
@@ -376,12 +390,6 @@ export function validateKendraEditableSiteContent(
       `clientLogos.${index}.name`,
       item.name,
       "Client logo name",
-    );
-    addRequiredError(
-      errors,
-      `clientLogos.${index}.image`,
-      item.image,
-      "Client logo image",
     );
     if (item.image && !isValidImageReference(item.image)) {
       errors[`clientLogos.${index}.image`] =

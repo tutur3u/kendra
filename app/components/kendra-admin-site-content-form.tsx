@@ -4,11 +4,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { KendraEditableSiteContent } from "@/lib/kendra-admin-site-content-model";
 import {
+  getUnusedKendraSiteImageRemovals,
   isKendraSiteImageFileDescriptor,
+  type KendraPendingSiteImageRemoval,
   MAX_SITE_IMAGE_FILE_BYTES,
 } from "@/lib/kendra-admin-site-image";
 import { adminFetch } from "./kendra-admin-session-client";
 import type {
+  SiteImageRemovalRequest,
   SiteImageUploadRequest,
   SiteImageUploadState,
 } from "./kendra-admin-site-image-field";
@@ -45,6 +48,13 @@ type ExperienceVisualField =
 
 type SiteContentMutationResponse = {
   content?: KendraEditableSiteContent;
+  error?: string;
+  errors?: Record<string, string>;
+};
+type PendingImageRemoval = KendraPendingSiteImageRemoval;
+type SiteImageRemovalResponse = {
+  assetId?: string;
+  deleted?: boolean;
   error?: string;
   errors?: Record<string, string>;
 };
@@ -88,6 +98,9 @@ export function KendraAdminSiteContentForm({
   const [imageUploads, setImageUploads] = useState<
     Record<string, SiteImageUploadState>
   >({});
+  const [pendingImageRemovals, setPendingImageRemovals] = useState<
+    PendingImageRemoval[]
+  >([]);
   const [saving, setSaving] = useState(false);
   const [saveStep, setSaveStep] = useState<string | null>(null);
   const imageUploadBusy =
@@ -375,6 +388,7 @@ export function KendraAdminSiteContentForm({
     setFieldErrors({});
     setHasChanges(false);
     setImageUploads({});
+    setPendingImageRemovals([]);
     setSaveStep(null);
   };
 
@@ -383,6 +397,39 @@ export function KendraAdminSiteContentForm({
     state: SiteImageUploadState,
   ) => {
     setImageUploads((current) => ({ ...current, [fieldKey]: state }));
+  };
+
+  const clearImageUploadState = (fieldKey: string) => {
+    setImageUploads((current) => {
+      const next = { ...current };
+      delete next[fieldKey];
+      return next;
+    });
+  };
+
+  const queueImageRemoval = ({ fieldKey, value }: PendingImageRemoval) => {
+    const normalized = value.trim();
+    if (!normalized) return;
+
+    setPendingImageRemovals((current) =>
+      current.some(
+        (item) => item.fieldKey === fieldKey && item.value === normalized,
+      )
+        ? current
+        : [...current, { fieldKey, value: normalized }],
+    );
+  };
+
+  const removeSiteImage = ({
+    fieldKey,
+    label,
+    onRemoved,
+    value,
+  }: SiteImageRemovalRequest) => {
+    queueImageRemoval({ fieldKey, value });
+    clearImageUploadState(fieldKey);
+    onRemoved();
+    toast.success(`${label} removed. Save pages to finish cleanup.`);
   };
 
   const isDirectUploadRequired = (
@@ -423,6 +470,7 @@ export function KendraAdminSiteContentForm({
   };
 
   const uploadSiteImage = async ({
+    currentValue,
     fieldKey,
     file,
     label,
@@ -566,6 +614,10 @@ export function KendraAdminSiteContentForm({
         );
       }
 
+      if (currentValue.trim() !== finalizePayload.assetUrl.trim()) {
+        queueImageRemoval({ fieldKey, value: currentValue });
+      }
+
       onUploaded(finalizePayload.assetUrl);
       setImageUploadState(fieldKey, {
         label,
@@ -587,6 +639,53 @@ export function KendraAdminSiteContentForm({
     } finally {
       URL.revokeObjectURL(previewUrl);
     }
+  };
+
+  const deletePendingSiteImage = async ({
+    fieldKey,
+    value,
+  }: PendingImageRemoval) => {
+    const response = await adminFetch("/api/admin/site-content/image", {
+      body: JSON.stringify({ fieldKey, value }),
+      headers: { "Content-Type": "application/json" },
+      method: "DELETE",
+    });
+    const payload = (await response
+      .json()
+      .catch(() => ({}))) as SiteImageRemovalResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        readPayloadError(payload, "We could not remove the old image."),
+      );
+    }
+
+    return payload;
+  };
+
+  const cleanupPendingImageRemovals = async (
+    savedContent: KendraEditableSiteContent,
+  ) => {
+    if (pendingImageRemovals.length === 0) {
+      return [] satisfies PendingImageRemoval[];
+    }
+
+    const cleanupQueue = getUnusedKendraSiteImageRemovals(
+      savedContent,
+      pendingImageRemovals,
+    );
+
+    if (cleanupQueue.length === 0) {
+      return [] satisfies PendingImageRemoval[];
+    }
+
+    const results = await Promise.allSettled(
+      cleanupQueue.map((item) => deletePendingSiteImage(item)),
+    );
+
+    return cleanupQueue.filter(
+      (_, index) => results[index]?.status === "rejected",
+    );
   };
 
   const saveContent = async () => {
@@ -619,12 +718,20 @@ export function KendraAdminSiteContentForm({
         return;
       }
 
+      setSaveStep("Removing unused media");
+      const failedRemovals = await cleanupPendingImageRemovals(payload.content);
+
       setSaveStep("Refreshing editor");
       setDraft(cloneContent(payload.content));
       setLastSaved(cloneContent(payload.content));
       setHasChanges(false);
+      setPendingImageRemovals(failedRemovals);
       onSaved?.(payload.content);
-      toast.success("Saved page content.");
+      if (failedRemovals.length > 0) {
+        toast.error("Saved pages, but some unused media could not be removed.");
+      } else {
+        toast.success("Saved page content.");
+      }
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -679,6 +786,7 @@ export function KendraAdminSiteContentForm({
         content={draft}
         fieldErrors={fieldErrors}
         imageUploads={imageUploads}
+        onRemoveSiteImage={removeSiteImage}
         onUploadSiteImage={(request) => void uploadSiteImage(request)}
         updateSite={updateSite}
       />
@@ -693,6 +801,7 @@ export function KendraAdminSiteContentForm({
         listActions={listActions}
         onAddClientLogo={addClientLogo}
         onMoveClientLogo={moveClientLogo}
+        onRemoveSiteImage={removeSiteImage}
         onRemoveClientLogo={removeClientLogo}
         onUpdateClientLogo={updateClientLogo}
         onUploadSiteImage={(request) => void uploadSiteImage(request)}
@@ -707,6 +816,7 @@ export function KendraAdminSiteContentForm({
         onMoveExperienceItem={moveExperienceItem}
         onRemoveExperienceGroup={removeExperienceGroup}
         onRemoveExperienceItem={removeExperienceItem}
+        onRemoveSiteImage={removeSiteImage}
         onUpdateExperienceGroupTitle={updateExperienceGroupTitle}
         onUpdateExperienceItem={updateExperienceItem}
         onUpdateExperienceVisual={updateExperienceVisual}

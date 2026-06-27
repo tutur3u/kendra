@@ -141,14 +141,16 @@ export function HomeClient({ content }: { content: KendraContent }) {
 						<div className="absolute inset-0 bg-[linear-gradient(135deg,#fff6ed_0%,#f8fbf4_48%,#f6eef0_100%)]" />
 						<div className="absolute inset-x-8 top-8 h-px bg-ink/10" />
 						<div className="absolute inset-y-8 left-8 w-px bg-ink/10" />
-						<Image
-							src={site.heroImage}
-							alt={site.heroImageAlt}
-							fill
-							priority
-							sizes="(max-width: 920px) calc(100vw - 32px), 460px"
-							className="object-contain object-bottom p-[clamp(1.25rem,3vw,2.75rem)] drop-shadow-[0_22px_34px_rgba(10,10,10,0.18)] transition-all duration-700 hover:scale-[1.025]"
-						/>
+						{site.heroImage ? (
+							<Image
+								src={site.heroImage}
+								alt={site.heroImageAlt}
+								fill
+								priority
+								sizes="(max-width: 920px) calc(100vw - 32px), 460px"
+								className="object-contain object-bottom p-[clamp(1.25rem,3vw,2.75rem)] drop-shadow-[0_22px_34px_rgba(10,10,10,0.18)] transition-all duration-700 hover:scale-[1.025]"
+							/>
+						) : null}
 						<motion.div 
 							className="absolute bottom-4 left-4 right-4 flex items-end justify-between border border-white/70 bg-white/80 px-4 py-3 text-ink shadow-[0_18px_44px_rgba(10,10,10,0.12)] backdrop-blur max-[520px]:flex-col max-[520px]:items-start max-[520px]:gap-3"
 							initial={{ opacity: 0, y: 10 }}

@@ -20,7 +20,7 @@ export const primaryButton =
 	"min-h-10 border border-ink bg-ink px-4 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50";
 export const secondaryButton =
 	"min-h-10 border border-line bg-white px-4 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50";
-const dangerButton =
+export const dangerButton =
 	"min-h-10 border border-coral/30 bg-white px-4 text-sm font-bold uppercase tracking-[0.1em] text-coral transition hover:bg-coral hover:text-white disabled:cursor-not-allowed disabled:opacity-50";
 
 const stringListLabels: Record<StringListField, string> = {

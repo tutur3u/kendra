@@ -20,6 +20,8 @@ export function ClientStrip({
 	clientLogos: KendraContent["clientLogos"];
 	notableClients: KendraContent["notableClients"];
 }) {
+	const visibleClientLogos = clientLogos.filter((client) => client.image);
+
 	return (
 		<section
 			className={cn(shell)}
@@ -35,7 +37,7 @@ export function ClientStrip({
 					</p>
 				</div>
 				<ul className="grid grid-cols-5 gap-4 md:gap-8 items-center justify-items-center opacity-80 md:opacity-60 md:grayscale grayscale-0 transition-all duration-700 hover:opacity-100 hover:grayscale-0 max-[920px]:grid-cols-3 max-[620px]:grid-cols-2">
-					{clientLogos.map((client) => (
+					{visibleClientLogos.map((client) => (
 						<li key={client.name} className="flex items-center justify-center h-10 md:h-12 w-full">
 							<Image
 								src={client.image}
@@ -47,7 +49,7 @@ export function ClientStrip({
 						</li>
 					))}
 					{notableClients
-						.filter((client) => !clientLogos.some((logo) => logo.name === client))
+						.filter((client) => !visibleClientLogos.some((logo) => logo.name === client))
 						.slice(0, 5)
 						.map((client) => (
 							<li

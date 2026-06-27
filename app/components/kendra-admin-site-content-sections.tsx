@@ -4,6 +4,7 @@ import type { KendraEditableSiteContent } from "@/lib/kendra-admin-site-content-
 import { FormSection } from "./kendra-admin-reel-form-fields";
 import {
   SiteImageField,
+  type SiteImageRemovalRequest,
   type SiteImageUploadRequest,
   type SiteImageUploadState,
 } from "./kendra-admin-site-image-field";
@@ -50,12 +51,14 @@ export function ProfileAndLinksSection({
   content,
   fieldErrors,
   imageUploads,
+  onRemoveSiteImage,
   onUploadSiteImage,
   updateSite,
 }: {
   content: KendraEditableSiteContent;
   fieldErrors: Record<string, string>;
   imageUploads: Record<string, SiteImageUploadState>;
+  onRemoveSiteImage: (request: SiteImageRemovalRequest) => void;
   onUploadSiteImage: (request: SiteImageUploadRequest) => void;
   updateSite: (field: SiteField, value: string) => void;
 }) {
@@ -130,6 +133,7 @@ export function ProfileAndLinksSection({
             error={getError(fieldErrors, "site.heroImage")}
             fieldKey="site.heroImage"
             label="Hero image"
+            onRemove={onRemoveSiteImage}
             onUpload={onUploadSiteImage}
             onUploaded={(value) => updateSite("heroImage", value)}
             previewAlt={content.site.heroImageAlt}
@@ -140,6 +144,7 @@ export function ProfileAndLinksSection({
             error={getError(fieldErrors, "site.clientProofImage")}
             fieldKey="site.clientProofImage"
             label="Client proof image"
+            onRemove={onRemoveSiteImage}
             onUpload={onUploadSiteImage}
             onUploaded={(value) => updateSite("clientProofImage", value)}
             uploadState={imageUploads["site.clientProofImage"]}
@@ -213,6 +218,7 @@ export function ClientsContentSection({
   onAddClientLogo,
   onMoveClientLogo,
   onRemoveClientLogo,
+  onRemoveSiteImage,
   onUpdateClientLogo,
   onUploadSiteImage,
 }: {
@@ -223,6 +229,7 @@ export function ClientsContentSection({
   onAddClientLogo: () => void;
   onMoveClientLogo: (index: number, direction: Direction) => void;
   onRemoveClientLogo: (index: number) => void;
+  onRemoveSiteImage: (request: SiteImageRemovalRequest) => void;
   onUpdateClientLogo: (
     index: number,
     field: ClientLogoField,
@@ -273,6 +280,7 @@ export function ClientsContentSection({
                 error={getError(fieldErrors, `clientLogos.${index}.image`)}
                 fieldKey={`clientLogos.${index}.image`}
                 label="Logo image"
+                onRemove={onRemoveSiteImage}
                 onUpload={onUploadSiteImage}
                 onUploaded={(value) =>
                   onUpdateClientLogo(index, "image", value)
@@ -311,6 +319,7 @@ export function ExperienceContentSection({
   onMoveExperienceItem,
   onRemoveExperienceGroup,
   onRemoveExperienceItem,
+  onRemoveSiteImage,
   onUpdateExperienceGroupTitle,
   onUpdateExperienceItem,
   onUpdateExperienceVisual,
@@ -329,6 +338,7 @@ export function ExperienceContentSection({
   ) => void;
   onRemoveExperienceGroup: (index: number) => void;
   onRemoveExperienceItem: (groupIndex: number, itemIndex: number) => void;
+  onRemoveSiteImage: (request: SiteImageRemovalRequest) => void;
   onUpdateExperienceGroupTitle: (groupIndex: number, value: string) => void;
   onUpdateExperienceItem: (
     groupIndex: number,
@@ -389,6 +399,7 @@ export function ExperienceContentSection({
               onAddExperienceItem={onAddExperienceItem}
               onMoveExperienceItem={onMoveExperienceItem}
               onRemoveExperienceItem={onRemoveExperienceItem}
+              onRemoveSiteImage={onRemoveSiteImage}
               onUpdateExperienceItem={onUpdateExperienceItem}
               onUpdateExperienceVisual={onUpdateExperienceVisual}
               onUploadSiteImage={onUploadSiteImage}
@@ -408,6 +419,7 @@ function ExperienceCreditList({
   onAddExperienceItem,
   onMoveExperienceItem,
   onRemoveExperienceItem,
+  onRemoveSiteImage,
   onUpdateExperienceItem,
   onUpdateExperienceVisual,
   onUploadSiteImage,
@@ -423,6 +435,7 @@ function ExperienceCreditList({
     direction: Direction,
   ) => void;
   onRemoveExperienceItem: (groupIndex: number, itemIndex: number) => void;
+  onRemoveSiteImage: (request: SiteImageRemovalRequest) => void;
   onUpdateExperienceItem: (
     groupIndex: number,
     itemIndex: number,
@@ -478,6 +491,7 @@ function ExperienceCreditList({
                 error={getError(fieldErrors, `${base}.visual.image`)}
                 fieldKey={`${base}.visual.image`}
                 label="Visual image"
+                onRemove={onRemoveSiteImage}
                 onUpload={onUploadSiteImage}
                 onUploaded={(value) =>
                   onUpdateExperienceVisual(
