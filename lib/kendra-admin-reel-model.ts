@@ -103,10 +103,53 @@ export function isKendraAudioFileDescriptor({
 	);
 }
 
-export function isKendraAudioStoragePath(value: string) {
-	return /^external-projects\/kendra\/voice-reels\/[a-z0-9][a-z0-9._~/-]*$/i.test(
-		value,
+function safeAudioFilenameSegment(value: string, fallback: string) {
+	const normalized = value
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9._-]+/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^[._-]+|[._-]+$/g, "")
+		.slice(0, 90);
+
+	return normalized || fallback;
+}
+
+function getAudioFilenameExtension(filename: string) {
+	const match = filename.match(/(\.[a-z0-9]+)$/i);
+	return match?.[1]?.toLowerCase() ?? "";
+}
+
+export function prepareKendraAudioFilename(filename: string) {
+	const extension = getAudioFilenameExtension(filename);
+	const base = safeAudioFilenameSegment(
+		extension ? filename.slice(0, -extension.length) : filename,
+		"reel",
 	);
+
+	return `${base}${extension || ".mp3"}`;
+}
+
+export function isKendraAudioStoragePath(value: string) {
+	if (
+		!value ||
+		/^https?:\/\//i.test(value) ||
+		value.includes("\\") ||
+		!value.startsWith("external-projects/kendra/voice-reels/")
+	) {
+		return false;
+	}
+
+	const segments = value.split("/");
+	if (
+		segments.length < 5 ||
+		segments.some((segment) => !segment || segment === "." || segment === "..")
+	) {
+		return false;
+	}
+
+	const filename = segments.at(-1);
+	return Boolean(filename && isKendraAudioFileDescriptor({ filename }));
 }
 
 function getEntryCollectionSlug(

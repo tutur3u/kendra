@@ -64,7 +64,7 @@ describe("Kendra audio upload URL route", () => {
 		const response = await POST(
 			createRequest({
 				contentType: "audio/mpeg",
-				filename: "reel.mp3",
+				filename: "Kendra Braun Interactive Sample Reel 26.mp3",
 				size: 5,
 				slug: "interactive",
 			}),
@@ -86,7 +86,7 @@ describe("Kendra audio upload URL route", () => {
 			collectionType: "voice-reels",
 			contentType: "audio/mpeg",
 			entrySlug: "interactive",
-			filename: "reel.mp3",
+			filename: "kendra-braun-interactive-sample-reel-26.mp3",
 			size: 5,
 			upsert: true,
 		});

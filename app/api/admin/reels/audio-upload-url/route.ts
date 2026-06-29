@@ -8,6 +8,7 @@ import { getKendraWorkspaceId } from "@/lib/kendra-config";
 import {
 	isKendraAudioFileDescriptor,
 	MAX_AUDIO_FILE_BYTES,
+	prepareKendraAudioFilename,
 	slugifyKendraReel,
 } from "@/lib/kendra-admin-reel-model";
 import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
 			collectionType: KENDRA_REEL_COLLECTION_SLUG,
 			contentType: contentType || "application/octet-stream",
 			entrySlug: slug,
-			filename,
+			filename: prepareKendraAudioFilename(filename),
 			size,
 			upsert: true,
 		} as Parameters<ExternalProjectsClient["createAssetUploadUrl"]>[1] & {

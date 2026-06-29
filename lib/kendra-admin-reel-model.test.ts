@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	parseKendraReelFormData,
+	prepareKendraAudioFilename,
 	readKendraAdminReels,
 	slugifyKendraReel,
 } from "./kendra-admin-reel-model";
@@ -103,6 +104,35 @@ describe("Kendra admin reel model", () => {
 		});
 	});
 
+	test("prepares safe storage filenames for uploaded audio", () => {
+		expect(prepareKendraAudioFilename("Kendra Braun Interactive Sample Reel 26.mp3")).toBe(
+			"kendra-braun-interactive-sample-reel-26.mp3",
+		);
+		expect(prepareKendraAudioFilename("   !!!.mp3")).toBe("reel.mp3");
+	});
+
+	test("accepts sanitized and legacy uploaded audio storage paths", () => {
+		for (const audioStoragePath of [
+			"external-projects/kendra/voice-reels/interactive/kendra-braun-interactive-sample-reel-26.mp3",
+			"external-projects/kendra/voice-reels/interactive/Kendra Braun Interactive Sample Reel 26.mp3",
+		]) {
+			const formData = new FormData();
+			formData.set("title", "Kendra Braun - Interactive");
+			formData.set("audioStoragePath", audioStoragePath);
+			formData.set("audioFileName", "Kendra Braun Interactive Sample Reel 26.mp3");
+			formData.set("audioContentType", "audio/mpeg");
+			formData.set("audioSize", "1782579");
+
+			const result = parseKendraReelFormData(formData);
+
+			expect(result.errors).toEqual({});
+			expect(result.input?.audioUpload).toMatchObject({
+				filename: "Kendra Braun Interactive Sample Reel 26.mp3",
+				storagePath: audioStoragePath,
+			});
+		}
+	});
+
 	test("rejects invalid reel forms", () => {
 		const formData = new FormData();
 		formData.set("audioFile", new File(["not audio"], "notes.txt", { type: "text/plain" }));
@@ -128,6 +158,32 @@ describe("Kendra admin reel model", () => {
 
 		expect(result.input).toBeNull();
 		expect(result.errors.audioFile).toBe("Upload an audio file.");
+	});
+
+	test("rejects unsafe uploaded audio storage paths", () => {
+		const invalidPaths = [
+			"https://storage.example/reel.mp3",
+			"external-projects/yoola/voice-reels/interactive/reel.mp3",
+			"external-projects/kendra/voice-reels/interactive/../reel.mp3",
+			"external-projects/kendra/voice-reels/interactive\\reel.mp3",
+			"external-projects/kendra/voice-reels/interactive/readme.txt",
+		];
+
+		for (const audioStoragePath of invalidPaths) {
+			const formData = new FormData();
+			formData.set("title", "Kendra Braun - Commercial");
+			formData.set("audioStoragePath", audioStoragePath);
+			formData.set("audioFileName", "commercial.mp3");
+			formData.set("audioContentType", "audio/mpeg");
+			formData.set("audioSize", "5");
+
+			const result = parseKendraReelFormData(formData);
+
+			expect(result.input).toBeNull();
+			expect(result.errors.audioFile).toBe(
+				"Audio upload did not return a valid storage path.",
+			);
+		}
 	});
 
 	test("keeps generated slugs stable", () => {
