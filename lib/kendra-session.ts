@@ -43,6 +43,11 @@ export type KendraSessionReadState =
 			status: "unauthenticated";
 	  };
 
+export type KendraSessionReadPreparation = {
+	candidate: KendraAdminSession | null;
+	state: Promise<KendraSessionReadState>;
+};
+
 export type KendraAppTokenExchangeResponse = {
 	accessToken?: string;
 	app?: {
@@ -211,9 +216,21 @@ async function validateKendraSession(session: KendraAdminSession) {
 			},
 		});
 
-		return response.ok ? session : null;
-	} catch {
-		return null;
+		if (response.ok) {
+			return "authenticated" as const;
+		}
+
+		if ([401, 403, 404].includes(response.status)) {
+			return "invalid" as const;
+		}
+
+		console.warn(
+			`[kendra] Session validation is temporarily unavailable (${response.status}).`,
+		);
+		return "unavailable" as const;
+	} catch (error) {
+		console.warn("[kendra] Session validation request failed.", error);
+		return "unavailable" as const;
 	}
 }
 
@@ -276,18 +293,18 @@ export async function refreshKendraSessionFromCookies() {
 		return null;
 	}
 
-	const validated = await validateKendraSession(refreshed);
+	const validation = await validateKendraSession(refreshed);
 
-	if (!validated) {
+	if (validation === "invalid") {
 		return null;
 	}
 
-	return validated;
+	return refreshed;
 }
 
-export async function getKendraSessionReadStateFromCookies(): Promise<KendraSessionReadState> {
-	const session = await getStoredKendraSession();
-
+async function resolveKendraSessionReadState(
+	session: KendraAdminSession | null,
+): Promise<KendraSessionReadState> {
 	if (!session) {
 		return { session: null, status: "unauthenticated" };
 	}
@@ -298,15 +315,29 @@ export async function getKendraSessionReadStateFromCookies(): Promise<KendraSess
 			: { session: null, status: "unauthenticated" };
 	}
 
-	const validated = await validateKendraSession(session);
+	const validation = await validateKendraSession(session);
 
-	if (validated) {
-		return { session: validated, status: "authenticated" };
+	if (validation !== "invalid") {
+		return { session, status: "authenticated" };
 	}
 
 	return isRefreshTokenCurrent(session)
 		? { session, status: "refreshable" }
 		: { session: null, status: "unauthenticated" };
+}
+
+export async function prepareKendraSessionReadFromCookies(): Promise<KendraSessionReadPreparation> {
+	const session = await getStoredKendraSession();
+
+	return {
+		candidate: session && isAccessTokenCurrent(session) ? session : null,
+		state: resolveKendraSessionReadState(session),
+	};
+}
+
+export async function getKendraSessionReadStateFromCookies(): Promise<KendraSessionReadState> {
+	const prepared = await prepareKendraSessionReadFromCookies();
+	return prepared.state;
 }
 
 export async function getKendraSessionFromCookies() {

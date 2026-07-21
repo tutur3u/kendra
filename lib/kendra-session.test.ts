@@ -112,6 +112,46 @@ describe("Kendra session validation", () => {
 		);
 	});
 
+	test("exposes a sealed current candidate while validation continues", async () => {
+		const { prepareKendraSessionReadFromCookies, setKendraSessionCookie } =
+			await import("./kendra-session");
+		const response = NextResponse.json({});
+		setKendraSessionCookie(response, createSession());
+		sessionCookieValue = readSessionCookieValue(response);
+
+		let finishValidation: ((response: Response) => void) | undefined;
+		globalThis.fetch = mock(
+			() =>
+				new Promise<Response>((resolve) => {
+					finishValidation = resolve;
+				}),
+		) as typeof fetch;
+
+		const prepared = await prepareKendraSessionReadFromCookies();
+
+		expect(prepared.candidate?.accessToken).toBe("app-token");
+		expect(finishValidation).toBeDefined();
+		finishValidation?.(Response.json({ ok: true }));
+		await expect(prepared.state).resolves.toMatchObject({
+			session: { accessToken: "app-token" },
+			status: "authenticated",
+		});
+	});
+
+	test("keeps a current sealed session when validation is temporarily unavailable", async () => {
+		const { getKendraSessionReadStateFromCookies, setKendraSessionCookie } =
+			await import("./kendra-session");
+		const response = NextResponse.json({});
+		setKendraSessionCookie(response, createSession());
+		sessionCookieValue = readSessionCookieValue(response);
+		globalThis.fetch = mock(() => new Response(null, { status: 503 })) as typeof fetch;
+
+		await expect(getKendraSessionReadStateFromCookies()).resolves.toMatchObject({
+			session: { accessToken: "app-token" },
+			status: "authenticated",
+		});
+	});
+
 	test("reports expired access with a valid refresh token as refreshable", async () => {
 		const { getKendraSessionReadStateFromCookies, setKendraSessionCookie } =
 			await import("./kendra-session");

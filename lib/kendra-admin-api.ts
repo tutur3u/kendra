@@ -5,6 +5,7 @@ import { getKendraApiBaseUrl, getKendraWorkspaceId } from "./kendra-config";
 import {
 	getKendraSessionFromCookies,
 	getKendraSessionReadStateFromCookies,
+	prepareKendraSessionReadFromCookies,
 } from "./kendra-session";
 
 export type KendraSignedAssetUploadUrl = Awaited<
@@ -213,6 +214,10 @@ export async function getKendraAdminSession() {
 
 export async function getKendraAdminSessionReadState() {
 	return getKendraSessionReadStateFromCookies();
+}
+
+export async function prepareKendraAdminSessionRead() {
+	return prepareKendraSessionReadFromCookies();
 }
 
 export async function getKendraAdminStudio(accessToken: string) {

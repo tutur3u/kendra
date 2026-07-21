@@ -14,8 +14,8 @@ import {
 	resolveKendraAdminTargetKey,
 } from "@/lib/kendra-config";
 import {
-	getKendraAdminSessionReadState,
 	getKendraAdminStudio,
+	prepareKendraAdminSessionRead,
 	type KendraAdminStudioPayload,
 } from "@/lib/kendra-admin-api";
 import { readKendraAdminReels } from "@/lib/kendra-admin-reel-model";
@@ -55,9 +55,13 @@ async function KendraAdminContent({
 
 	const params = await searchParams;
 	const targetKey = resolveKendraAdminTargetKey(params.target);
+	const sessionRead = await prepareKendraAdminSessionRead();
+	const studioPromise = sessionRead.candidate
+		? getKendraAdminStudio(sessionRead.candidate.accessToken).catch(() => emptyStudio())
+		: Promise.resolve(emptyStudio());
 	const [loginHref, sessionState] = await Promise.all([
 		getKendraCentralizedLoginHref(targetKey),
-		getKendraAdminSessionReadState(),
+		sessionRead.state,
 	]);
 
 	if (sessionState.status === "unauthenticated") {
@@ -72,9 +76,7 @@ async function KendraAdminContent({
 
 	const { session } = sessionState;
 
-	const studio = await getKendraAdminStudio(session.accessToken).catch(() =>
-		emptyStudio(),
-	);
+	const studio = await studioPromise;
 
 	return (
 		<KendraAdminClient
