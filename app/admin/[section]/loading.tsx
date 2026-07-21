@@ -1,5 +1,5 @@
-import { KendraAdminLoadingPanel } from "../../components/kendra-admin-loading-panel";
+import { KendraAdminSectionLoadingPanel } from "../../components/kendra-admin-loading-panel";
 
 export default function AdminSectionLoading() {
-	return <KendraAdminLoadingPanel />;
+	return <KendraAdminSectionLoadingPanel />;
 }

@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
-import { Suspense } from "react";
 import { KendraAdminClient } from "../../components/kendra-admin-client";
-import { KendraAdminLoadingPanel } from "../../components/kendra-admin-loading-panel";
 import { KendraAdminLoginPanel } from "../../components/kendra-admin-login-panel";
 import { getKendraCentralizedLoginHref } from "../login-link";
 import {
 	getKendraTuturuuuDrivePathPrefix,
 	getKendraTuturuuuDriveUrl,
 	getKendraTuturuuuMembersUrl,
-	getKendraTuturuuuTasksUrl,
 } from "@/lib/kendra-config";
 import {
 	getKendraAdminPageSessionReadState,
@@ -34,11 +31,7 @@ export default function AdminSectionPage({
 }: {
 	params: Promise<{ section: string }>;
 }) {
-	return (
-		<Suspense fallback={<KendraAdminLoadingPanel />}>
-			<KendraAdminSectionContent params={params} />
-		</Suspense>
-	);
+	return <KendraAdminSectionContent params={params} />;
 }
 
 async function KendraAdminSectionContent({
@@ -87,7 +80,6 @@ async function KendraAdminSectionContent({
 			tuturuuuDrivePathPrefix={getKendraTuturuuuDrivePathPrefix()}
 			tuturuuuDriveUrl={getKendraTuturuuuDriveUrl()}
 			tuturuuuMembersUrl={getKendraTuturuuuMembersUrl()}
-			tuturuuuTasksUrl={getKendraTuturuuuTasksUrl()}
 			userEmail={session.user.email}
 		/>
 	);
