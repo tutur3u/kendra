@@ -3,6 +3,8 @@ import { availability, navigation, site } from "../content";
 import { bodyText, cn, labelText, pillButton, shell } from "./ui";
 import { Waveform } from "./waveform";
 
+const COPYRIGHT_YEAR = "2026";
+
 export function SiteFooter() {
 	return (
 		<footer className="mt-32 border-t border-line bg-surface py-24">
@@ -72,7 +74,7 @@ export function SiteFooter() {
 					<div className="flex items-center gap-4">
 						<Waveform className="h-4" />
 						<span className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-ink-soft opacity-60">
-							{site.name} © {new Date().getFullYear()}
+							{site.name} © {COPYRIGHT_YEAR}
 						</span>
 					</div>
 				</div>
