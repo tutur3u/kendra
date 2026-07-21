@@ -22,14 +22,15 @@ function getRequestOrigin(headersList: Headers) {
 
 export async function getKendraCentralizedLoginHref(
 	targetKey: KendraAdminTargetKey,
+	options?: { nextUrl?: string },
 ) {
 	const requestOrigin = getRequestOrigin(await headers());
 	const nextUrlByTarget: Record<KendraAdminTargetKey, string> = {
-		dashboard: "/admin",
+		dashboard: "/admin/audio",
 	};
 
 	return buildKendraCentralizedLoginUrl({
 		...(requestOrigin ? { appBaseUrl: requestOrigin } : {}),
-		nextUrl: nextUrlByTarget[targetKey],
+		nextUrl: options?.nextUrl ?? nextUrlByTarget[targetKey],
 	});
 }

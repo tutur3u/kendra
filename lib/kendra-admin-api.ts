@@ -244,6 +244,7 @@ export async function getKendraAdminStudioSnapshot(accessToken: string) {
 export function revalidateKendraContent() {
 	revalidateTag(KENDRA_ADMIN_SNAPSHOT_CACHE_TAG, { expire: 0 });
 	revalidatePath("/", "layout");
+	revalidatePath("/admin/[section]", "page");
 	revalidatePath("/");
 	revalidatePath("/voice-over");
 	revalidatePath("/experience");
