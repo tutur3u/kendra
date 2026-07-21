@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode, useRef } from "react";
+import { Suspense, useEffect, type ReactNode, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 
@@ -17,6 +17,14 @@ function restoreNativeScrollState() {
 }
 
 export function SmoothScroll({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={children}>
+      <SmoothScrollController>{children}</SmoothScrollController>
+    </Suspense>
+  );
+}
+
+function SmoothScrollController({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const lenisRef = useRef<Lenis | null>(null);
   const isAdminRoute = pathname.startsWith("/admin");
