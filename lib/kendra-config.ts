@@ -94,6 +94,14 @@ export function getKendraWebAppUrl() {
 	});
 }
 
+export function getKendraTasksAppUrl() {
+	return getConfiguredUrl({
+		envName: "TUTURUUU_TASKS_APP_URL",
+		localUrl: "http://localhost:7809",
+		productionUrl: "https://tasks.tuturuuu.com",
+	});
+}
+
 function getKendraWorkspaceAppUrl(path: string) {
 	return `${getKendraWebAppUrl()}/${encodeURIComponent(getKendraWorkspaceId())}/${path}`;
 }
@@ -104,6 +112,23 @@ export function getKendraTuturuuuDriveUrl() {
 
 export function getKendraTuturuuuMembersUrl() {
 	return getKendraWorkspaceAppUrl("members");
+}
+
+export function buildKendraTasksUrl({
+	tasksAppUrl = getKendraTasksAppUrl(),
+	workspaceId = getKendraWorkspaceId(),
+}: {
+	tasksAppUrl?: string;
+	workspaceId?: string;
+} = {}) {
+	return new URL(
+		`/${encodeURIComponent(workspaceId)}/tasks`,
+		tasksAppUrl,
+	).toString();
+}
+
+export function getKendraTuturuuuTasksUrl() {
+	return buildKendraTasksUrl();
 }
 
 export function getKendraTuturuuuDrivePathPrefix() {

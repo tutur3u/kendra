@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
@@ -26,8 +27,8 @@ type ReelMutationResponse = {
 };
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
-	{ id: "audio", label: "Audio" },
-	{ id: "pages", label: "Pages" },
+	{ id: "audio", label: "Audio library" },
+	{ id: "pages", label: "Website pages" },
 	{ id: "storage", label: "Storage" },
 	{ id: "members", label: "Members" },
 	{ id: "account", label: "Account" },
@@ -113,6 +114,7 @@ export function KendraAdminClient({
 	tuturuuuDrivePathPrefix,
 	tuturuuuDriveUrl,
 	tuturuuuMembersUrl,
+	tuturuuuTasksUrl,
 	userEmail,
 }: {
 	initialReels: KendraAdminReel[];
@@ -121,6 +123,7 @@ export function KendraAdminClient({
 	tuturuuuDrivePathPrefix: string;
 	tuturuuuDriveUrl: string;
 	tuturuuuMembersUrl: string;
+	tuturuuuTasksUrl: string;
 	userEmail: string | null;
 }) {
 	const [activeTab, setActiveTab] = useState<AdminTab>("audio");
@@ -221,18 +224,32 @@ export function KendraAdminClient({
 	return (
 		<main className="min-h-screen bg-surface">
 			<section className={cn(shell, "grid gap-8 py-[clamp(32px,6vw,72px)]")}>
-				<header className="border-b border-line pb-6">
-					<h1 className="text-3xl font-semibold text-ink">Admin Dashboard</h1>
+				<header className="grid gap-5 border border-line bg-white p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+					<div className="min-w-0">
+						<span className={labelText}>Kendra Studio</span>
+						<h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">
+							Content dashboard
+						</h1>
+						<p className="mt-3 max-w-2xl text-ink-soft text-sm leading-6">
+							Manage voice reels, website copy, media, and collaborators without leaving the studio.
+						</p>
+					</div>
+					<Link
+						className="inline-flex min-h-11 items-center justify-center border border-line bg-white px-5 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent"
+						href="/"
+					>
+						View website
+					</Link>
 				</header>
 
 				<nav
-					className="flex flex-wrap gap-2 border-b border-line"
+					className="flex gap-2 overflow-x-auto border-b border-line pb-3"
 					aria-label="Admin sections"
 				>
 					{tabs.map((tab) => (
 						<button
 							className={cn(
-								"min-h-11 border-b-2 px-4 text-sm font-bold uppercase tracking-[0.12em] transition",
+								"min-h-11 shrink-0 whitespace-nowrap border-b-2 px-4 text-sm font-bold uppercase tracking-[0.12em] transition",
 								activeTab === tab.id
 									? "border-accent text-accent"
 									: "border-transparent text-ink-soft hover:text-ink",
@@ -244,6 +261,14 @@ export function KendraAdminClient({
 							{tab.label}
 						</button>
 					))}
+					<a
+						className="inline-flex min-h-11 shrink-0 items-center border border-accent/35 bg-accent/5 px-4 text-sm font-bold uppercase tracking-[0.12em] text-accent transition hover:border-accent"
+						href={tuturuuuTasksUrl}
+						rel="noreferrer"
+						target="_blank"
+					>
+						Tasks <span aria-hidden="true" className="ml-2">↗</span>
+					</a>
 				</nav>
 
 				{activeTab === "audio" ? (

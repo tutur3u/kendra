@@ -7,6 +7,7 @@ import {
 	getKendraTuturuuuDrivePathPrefix,
 	getKendraTuturuuuDriveUrl,
 	getKendraTuturuuuMembersUrl,
+	getKendraTuturuuuTasksUrl,
 	resolveKendraAdminTargetKey,
 } from "@/lib/kendra-config";
 import {
@@ -66,6 +67,7 @@ export default async function AdminPage({
 			tuturuuuDrivePathPrefix={getKendraTuturuuuDrivePathPrefix()}
 			tuturuuuDriveUrl={getKendraTuturuuuDriveUrl()}
 			tuturuuuMembersUrl={getKendraTuturuuuMembersUrl()}
+			tuturuuuTasksUrl={getKendraTuturuuuTasksUrl()}
 			userEmail={session.user.email}
 		/>
 	);
