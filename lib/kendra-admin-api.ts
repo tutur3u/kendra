@@ -1,9 +1,10 @@
-import { revalidatePath } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, revalidateTag } from "next/cache";
 import { ExternalProjectsClient } from "tuturuuu/external-projects";
 import { KendraAdminDownstreamError } from "./kendra-admin-route-errors";
 import { getKendraApiBaseUrl, getKendraWorkspaceId } from "./kendra-config";
 import {
 	getKendraSessionFromCookies,
+	getKendraPageSessionReadStateFromCookies,
 	getKendraSessionReadStateFromCookies,
 	prepareKendraSessionReadFromCookies,
 } from "./kendra-session";
@@ -220,12 +221,28 @@ export async function prepareKendraAdminSessionRead() {
 	return prepareKendraSessionReadFromCookies();
 }
 
+export async function getKendraAdminPageSessionReadState() {
+	return getKendraPageSessionReadStateFromCookies();
+}
+
 export async function getKendraAdminStudio(accessToken: string) {
 	const client = createKendraExternalProjectsClient(accessToken);
 	return client.getStudio(getKendraWorkspaceId()) as Promise<KendraAdminStudioPayload>;
 }
 
+const KENDRA_ADMIN_SNAPSHOT_CACHE_TAG = "kendra-admin-snapshot";
+
+export async function getKendraAdminStudioSnapshot(accessToken: string) {
+	"use cache";
+
+	cacheLife({ expire: 300, revalidate: 30, stale: 30 });
+	cacheTag(KENDRA_ADMIN_SNAPSHOT_CACHE_TAG);
+
+	return getKendraAdminStudio(accessToken);
+}
+
 export function revalidateKendraContent() {
+	revalidateTag(KENDRA_ADMIN_SNAPSHOT_CACHE_TAG, { expire: 0 });
 	revalidatePath("/", "layout");
 	revalidatePath("/");
 	revalidatePath("/voice-over");

@@ -3,7 +3,10 @@ import type { KendraReelMutationInput } from "./kendra-admin-reel-model";
 import type { KendraAdminStudioPayload } from "./kendra-admin-api";
 
 mock.module("next/cache", () => ({
+	cacheLife: () => undefined,
+	cacheTag: () => undefined,
 	revalidatePath: () => undefined,
+	revalidateTag: () => undefined,
 }));
 
 const { createKendraReel, updateKendraReel } = await import("./kendra-admin-reels");

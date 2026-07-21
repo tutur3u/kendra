@@ -152,6 +152,26 @@ describe("Kendra session validation", () => {
 		});
 	});
 
+	test("reads a current sealed page session without a validation request", async () => {
+		const { getKendraPageSessionReadStateFromCookies, setKendraSessionCookie } =
+			await import("./kendra-session");
+		const response = NextResponse.json({});
+		setKendraSessionCookie(response, createSession());
+		sessionCookieValue = readSessionCookieValue(response);
+
+		const calls: Array<{ init?: RequestInit; input: RequestInfo | URL }> = [];
+		globalThis.fetch = (async (input, init) => {
+			calls.push({ init, input });
+			return Response.json({ ok: true });
+		}) as typeof fetch;
+
+		await expect(getKendraPageSessionReadStateFromCookies()).resolves.toMatchObject({
+			session: { accessToken: "app-token" },
+			status: "authenticated",
+		});
+		expect(calls).toHaveLength(0);
+	});
+
 	test("reports expired access with a valid refresh token as refreshable", async () => {
 		const { getKendraSessionReadStateFromCookies, setKendraSessionCookie } =
 			await import("./kendra-session");

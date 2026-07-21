@@ -4,7 +4,10 @@ import { DEFAULT_KENDRA_EDITABLE_SITE_CONTENT } from "./kendra-admin-site-conten
 const revalidatePath = mock(() => undefined);
 
 mock.module("next/cache", () => ({
+	cacheLife: () => undefined,
+	cacheTag: () => undefined,
 	revalidatePath,
+	revalidateTag: () => undefined,
 }));
 
 const { saveKendraAdminSiteContent } = await import("./kendra-admin-site-content");

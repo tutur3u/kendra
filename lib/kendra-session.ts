@@ -335,6 +335,22 @@ export async function prepareKendraSessionReadFromCookies(): Promise<KendraSessi
 	};
 }
 
+export async function getKendraPageSessionReadStateFromCookies(): Promise<KendraSessionReadState> {
+	const session = await getStoredKendraSession();
+
+	if (!session) {
+		return { session: null, status: "unauthenticated" };
+	}
+
+	if (isAccessTokenCurrent(session)) {
+		return { session, status: "authenticated" };
+	}
+
+	return isRefreshTokenCurrent(session)
+		? { session, status: "refreshable" }
+		: { session: null, status: "unauthenticated" };
+}
+
 export async function getKendraSessionReadStateFromCookies(): Promise<KendraSessionReadState> {
 	const prepared = await prepareKendraSessionReadFromCookies();
 	return prepared.state;
