@@ -250,6 +250,7 @@ export function KendraAdminClient({
 					<Link
 						className="inline-flex min-h-11 items-center justify-center gap-2 border border-line bg-white px-5 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent"
 						href="/"
+						prefetch={false}
 					>
 						<Globe2 aria-hidden="true" className="size-4" />
 						View website
