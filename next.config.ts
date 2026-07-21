@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+	cacheComponents: true,
 	devIndicators: false,
 	images: {
 		remotePatterns: [
@@ -22,6 +23,7 @@ const nextConfig: NextConfig = {
 			},
 		],
 	},
+	partialPrefetching: true,
 };
 
 export default nextConfig;

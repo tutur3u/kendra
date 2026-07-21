@@ -2,6 +2,19 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import {
+	AudioLines,
+	CircleUserRound,
+	ExternalLink,
+	FileText,
+	Globe2,
+	HardDrive,
+	ListTodo,
+	LoaderCircle,
+	LogOut,
+	Users,
+	type LucideIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { KendraAdminReel } from "@/lib/kendra-admin-reel-model";
@@ -26,12 +39,12 @@ type ReelMutationResponse = {
 	reels?: KendraAdminReel[];
 };
 
-const tabs: Array<{ id: AdminTab; label: string }> = [
-	{ id: "audio", label: "Audio library" },
-	{ id: "pages", label: "Website pages" },
-	{ id: "storage", label: "Storage" },
-	{ id: "members", label: "Members" },
-	{ id: "account", label: "Account" },
+const tabs: Array<{ icon: LucideIcon; id: AdminTab; label: string }> = [
+	{ icon: AudioLines, id: "audio", label: "Audio library" },
+	{ icon: FileText, id: "pages", label: "Website pages" },
+	{ icon: HardDrive, id: "storage", label: "Storage" },
+	{ icon: Users, id: "members", label: "Members" },
+	{ icon: CircleUserRound, id: "account", label: "Account" },
 ];
 
 function AdminTabLoading({
@@ -45,9 +58,9 @@ function AdminTabLoading({
 		<section className="border border-line bg-white p-6">
 			<span className={labelText}>{label}</span>
 			<div className="mt-4 flex items-center gap-3 text-ink-soft text-sm">
-				<span
+				<LoaderCircle
 					aria-hidden="true"
-					className="h-5 w-5 animate-[slow-spin_700ms_linear_infinite] rounded-full border-2 border-accent/25 border-t-accent"
+					className="size-5 animate-[slow-spin_700ms_linear_infinite] text-accent"
 				/>
 				<span>{text}</span>
 			</div>
@@ -235,9 +248,10 @@ export function KendraAdminClient({
 						</p>
 					</div>
 					<Link
-						className="inline-flex min-h-11 items-center justify-center border border-line bg-white px-5 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent"
+						className="inline-flex min-h-11 items-center justify-center gap-2 border border-line bg-white px-5 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent"
 						href="/"
 					>
+						<Globe2 aria-hidden="true" className="size-4" />
 						View website
 					</Link>
 				</header>
@@ -246,10 +260,13 @@ export function KendraAdminClient({
 					className="flex gap-2 overflow-x-auto border-b border-line pb-3"
 					aria-label="Admin sections"
 				>
-					{tabs.map((tab) => (
+					{tabs.map((tab) => {
+						const Icon = tab.icon;
+
+						return (
 						<button
 							className={cn(
-								"min-h-11 shrink-0 whitespace-nowrap border-b-2 px-4 text-sm font-bold uppercase tracking-[0.12em] transition",
+								"inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 text-sm font-bold uppercase tracking-[0.12em] transition",
 								activeTab === tab.id
 									? "border-accent text-accent"
 									: "border-transparent text-ink-soft hover:text-ink",
@@ -258,16 +275,20 @@ export function KendraAdminClient({
 							onClick={() => setActiveTab(tab.id)}
 							type="button"
 						>
+							<Icon aria-hidden="true" className="size-4" />
 							{tab.label}
 						</button>
-					))}
+						);
+					})}
 					<a
-						className="inline-flex min-h-11 shrink-0 items-center border border-accent/35 bg-accent/5 px-4 text-sm font-bold uppercase tracking-[0.12em] text-accent transition hover:border-accent"
+						className="inline-flex min-h-11 shrink-0 items-center gap-2 border border-accent/35 bg-accent/5 px-4 text-sm font-bold uppercase tracking-[0.12em] text-accent transition hover:border-accent"
 						href={tuturuuuTasksUrl}
 						rel="noreferrer"
 						target="_blank"
 					>
-						Tasks <span aria-hidden="true" className="ml-2">↗</span>
+						<ListTodo aria-hidden="true" className="size-4" />
+						Tasks
+						<ExternalLink aria-hidden="true" className="size-3.5" />
 					</a>
 				</nav>
 
@@ -360,16 +381,18 @@ export function KendraAdminClient({
 						</div>
 						<div className="grid content-start gap-3 border border-line bg-white p-6">
 							<a
-								className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-6 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent"
+								className="inline-flex min-h-11 items-center justify-center gap-2 border border-ink bg-ink px-6 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-accent"
 								href="/voice-over#reels"
 							>
+								<ExternalLink aria-hidden="true" className="size-4" />
 								View public reels
 							</a>
 							<a
-								className="inline-flex min-h-11 items-center justify-center border border-line bg-white px-6 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent"
+								className="inline-flex min-h-11 items-center justify-center gap-2 border border-line bg-white px-6 text-sm font-bold uppercase tracking-[0.1em] text-ink transition hover:border-accent hover:text-accent"
 								href="/admin/logout"
 								onClick={clearKendraAdminSessionHint}
 							>
+								<LogOut aria-hidden="true" className="size-4" />
 								Sign out
 							</a>
 						</div>

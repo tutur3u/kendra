@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { KendraAdminClient } from "../components/kendra-admin-client";
+import { KendraAdminLoadingPanel } from "../components/kendra-admin-loading-panel";
 import { KendraAdminLoginPanel } from "../components/kendra-admin-login-panel";
 import { getKendraCentralizedLoginHref } from "./login-link";
 import {
@@ -17,8 +20,6 @@ import {
 } from "@/lib/kendra-admin-api";
 import { readKendraAdminReels } from "@/lib/kendra-admin-reel-model";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
 	title: "Admin Dashboard",
 	description: "Kendra audio reel management and publishing controls.",
@@ -33,15 +34,31 @@ function emptyStudio(): KendraAdminStudioPayload {
 	};
 }
 
-export default async function AdminPage({
+export default function AdminPage({
 	searchParams,
 }: {
 	searchParams: Promise<{ target?: string }>;
 }) {
+	return (
+		<Suspense fallback={<KendraAdminLoadingPanel />}>
+			<KendraAdminContent searchParams={searchParams} />
+		</Suspense>
+	);
+}
+
+async function KendraAdminContent({
+	searchParams,
+}: {
+	searchParams: Promise<{ target?: string }>;
+}) {
+	await connection();
+
 	const params = await searchParams;
 	const targetKey = resolveKendraAdminTargetKey(params.target);
-	const loginHref = await getKendraCentralizedLoginHref(targetKey);
-	const sessionState = await getKendraAdminSessionReadState();
+	const [loginHref, sessionState] = await Promise.all([
+		getKendraCentralizedLoginHref(targetKey),
+		getKendraAdminSessionReadState(),
+	]);
 
 	if (sessionState.status === "unauthenticated") {
 		return <KendraAdminLoginPanel loginHref={loginHref} />;
