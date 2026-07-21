@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { SiteFooter } from "./components/site-footer";
@@ -9,6 +10,15 @@ import { site } from "./content";
 import { getKendraAppBaseUrl } from "@/lib/kendra-config";
 
 const bodyClassName = "relative isolate min-h-full overflow-x-hidden bg-white font-sans text-ink selection:bg-accent selection:text-white";
+
+function SiteHeaderFallback() {
+	return (
+		<div
+			aria-hidden="true"
+			className="h-16 border-line border-b bg-white sm:h-20"
+		/>
+	);
+}
 
 export const metadata: Metadata = {
 	metadataBase: new URL(getKendraAppBaseUrl()),
@@ -34,7 +44,9 @@ export default function RootLayout({
 		<html lang="en" className="h-full scroll-smooth bg-background text-foreground">
 			<body className={bodyClassName}>
 				<SmoothScroll>
-					<SiteHeader />
+					<Suspense fallback={<SiteHeaderFallback />}>
+						<SiteHeader />
+					</Suspense>
 					{children}
 					<SiteFooter />
 				</SmoothScroll>
