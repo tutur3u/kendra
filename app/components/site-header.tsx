@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { navigation, site } from "../content";
 import {
 	adminFetch,
@@ -41,13 +41,12 @@ type AdminSessionState = {
 
 export function SiteHeader() {
 	const pathname = usePathname();
-	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [adminSession, setAdminSession] = useState<AdminSessionState | null>(null);
-	const refreshedAdminPathRef = useRef<string | null>(null);
 	const isAdminSignedIn = adminSession?.authenticated === true;
+	const shouldPrefetchPublicPages = !pathname.startsWith("/admin");
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -127,13 +126,6 @@ export function SiteHeader() {
 			});
 			setAdminSession(payload);
 
-			if (
-				pathname.startsWith("/admin") &&
-				refreshedAdminPathRef.current !== pathname
-			) {
-				refreshedAdminPathRef.current = pathname;
-				router.refresh();
-			}
 		};
 
 		async function verifyHintSession() {
@@ -189,7 +181,7 @@ export function SiteHeader() {
 			cancelled = true;
 			stopRefresh();
 		};
-	}, [pathname, router]);
+	}, [pathname]);
 
 	return (
 		<>
@@ -208,6 +200,7 @@ export function SiteHeader() {
 				>
 					<Link
 						href="/"
+						prefetch={shouldPrefetchPublicPages}
 						className="inline-flex min-w-max items-center gap-2 md:gap-4 group"
 						aria-label={`${site.name} home`}
 					>
@@ -235,6 +228,7 @@ export function SiteHeader() {
 								<Link
 									key={item.href}
 									href={item.href}
+									prefetch={shouldPrefetchPublicPages}
 									className={cn(
 										"text-[0.75rem] font-bold uppercase tracking-[0.2em] text-ink-soft transition duration-300 hover:text-accent hover:italic",
 										isActive && "text-accent italic",
@@ -284,6 +278,7 @@ export function SiteHeader() {
 							</div>
 							<Link
 								href="/admin"
+								prefetch={!pathname.startsWith("/admin")}
 								className="px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface hover:text-accent"
 								onClick={() => setIsAvatarMenuOpen(false)}
 								role="menuitem"
@@ -336,6 +331,7 @@ export function SiteHeader() {
 							<Link
 								key={item.href}
 								href={item.href}
+								prefetch={shouldPrefetchPublicPages}
 								className={cn(
 									"text-4xl font-serif italic tracking-tight text-ink transition-all duration-300",
 									isActive ? "text-accent" : "opacity-60",
