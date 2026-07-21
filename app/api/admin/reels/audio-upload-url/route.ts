@@ -16,8 +16,6 @@ import { KENDRA_REEL_COLLECTION_SLUG } from "@/lib/kendra-external-project-manif
 import { NextResponse } from "next/server";
 import type { ExternalProjectsClient } from "tuturuuu/external-projects";
 
-export const dynamic = "force-dynamic";
-
 function readString(record: Record<string, unknown>, key: string) {
 	const value = record[key];
 	return typeof value === "string" ? value.trim() : "";

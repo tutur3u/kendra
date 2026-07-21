@@ -22,8 +22,6 @@ import { getKendraWorkspaceId } from "@/lib/kendra-config";
 import { NextResponse } from "next/server";
 import type { ExternalProjectsClient } from "tuturuuu/external-projects";
 
-export const dynamic = "force-dynamic";
-
 function readRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)

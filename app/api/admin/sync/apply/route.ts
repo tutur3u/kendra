@@ -9,8 +9,6 @@ import { uploadKendraPublicManifestAssets } from "@/lib/kendra-public-asset-sync
 import type { ExternalProjectsClient } from "tuturuuu/external-projects";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 type SdkManifest = Parameters<ExternalProjectsClient["applySyncManifest"]>[1];
 
 function readErrorMessage(error: unknown) {

@@ -6,8 +6,6 @@ import {
 	setKendraSessionCookie,
 } from "@/lib/kendra-session";
 
-export const dynamic = "force-dynamic";
-
 function createSessionPayload(session: KendraAdminSession) {
 	return {
 		authenticated: true,

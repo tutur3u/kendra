@@ -3,8 +3,6 @@ import { refreshKendraReels } from "@/lib/kendra-admin-reels";
 import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 export async function POST() {
 	const auth = await getKendraAdminRouteSession();
 

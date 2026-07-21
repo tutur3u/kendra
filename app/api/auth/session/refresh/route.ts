@@ -5,8 +5,6 @@ import {
 import { sanitizeKendraNextPath } from "@/lib/kendra-config";
 import { type NextRequest, NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 function readRefreshNextPath(request: NextRequest) {
 	return sanitizeKendraNextPath(
 		request.nextUrl.searchParams.get("nextUrl"),

@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { getKendraStorageAnalytics } from "@/lib/kendra-storage-analytics";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
 	const auth = await getKendraAdminRouteSession();
 

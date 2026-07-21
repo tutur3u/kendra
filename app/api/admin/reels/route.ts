@@ -12,8 +12,6 @@ import { createKendraReelMutationStream } from "@/lib/kendra-admin-reel-stream";
 import { createKendraAdminErrorResponse } from "@/lib/kendra-admin-route-errors";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
 	const auth = await getKendraAdminRouteSession();
 

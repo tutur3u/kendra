@@ -5,8 +5,6 @@ import { linkExternalProjectPublicFolderAssets } from "tuturuuu/external-project
 import { ExternalProjectsClient } from "tuturuuu/external-projects";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 type SdkManifest = Parameters<ExternalProjectsClient["diffSyncManifest"]>[1];
 
 function createClient(accessToken: string) {

@@ -3,8 +3,6 @@ import { revalidateKendraContent } from "@/lib/kendra-admin-api";
 import { getKendraAdminRouteSession } from "@/lib/kendra-admin-route-session";
 import { getKendraApiBaseUrl, getKendraWorkspaceId } from "@/lib/kendra-config";
 
-export const dynamic = "force-dynamic";
-
 function getPlatformStorageUrl(request: Request) {
 	const incomingUrl = new URL(request.url);
 	const apiBaseUrl = getKendraApiBaseUrl().replace(/\/+$/, "");
