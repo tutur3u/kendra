@@ -45,6 +45,8 @@ describe("Kendra admin site content save", () => {
 		const getStudio = mock(async () => createStudio());
 		const updateEntry = mock(async () => undefined);
 		const client = {
+			createAsset: mock(async () => ({ id: "resume-asset" })),
+			getAssetUrl: () => "https://example.com/assets/resume-asset",
 			createCollection: mock(async () => undefined),
 			createEntry: mock(async () => undefined),
 			getStudio,
@@ -65,3 +67,28 @@ describe("Kendra admin site content save", () => {
 		expect(revalidatePath).toHaveBeenCalled();
 	});
 });
+
+for (const hasEntry of [true, false]) {
+  test(`persists a permanent resume link with existing entry: ${hasEntry}`, async () => {
+    const studio = createStudio();
+    if (!hasEntry) studio.entries = [];
+    const updateEntry = mock(async (..._args: unknown[]) => undefined);
+    const client = {
+      createAsset: mock(async () => ({ asset: { id: "resume-asset" } })),
+      getAssetUrl: () => "https://example.com/assets/resume-asset",
+      createCollection: mock(async () => undefined),
+      createEntry: mock(async () => ({ id: "entry-site" })),
+      getStudio: mock(async () => studio),
+      setupExternalProjectStudio: mock(async () => undefined),
+      updateEntry,
+    };
+    const content = {
+      ...DEFAULT_KENDRA_EDITABLE_SITE_CONTENT,
+      site: { ...DEFAULT_KENDRA_EDITABLE_SITE_CONTENT.site, resumeUrl: "https://project.supabase.co/storage/v1/object/sign/workspaces/ws-1/external-projects/kendra/resume.pdf?token=expired" },
+    };
+    const saved = await saveKendraAdminSiteContent(client, "ws-1", content);
+    expect(saved.site.resumeUrl).toBe("https://example.com/assets/resume-asset");
+    expect(updateEntry.mock.calls[0]?.[2]).toMatchObject({ profile_data: { content: saved } });
+    expect(content.site.resumeUrl).toContain("token=expired");
+  });
+}

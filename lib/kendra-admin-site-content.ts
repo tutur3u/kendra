@@ -11,10 +11,13 @@ import {
   readKendraAdminSiteContent,
 } from "./kendra-admin-site-content-model";
 import { getKendraWorkspaceId } from "./kendra-config";
+import { resolveKendraResumeLink } from "./kendra-resume-link";
 import { kendraExternalProjectManifest } from "./kendra-external-project-manifest";
 
 type KendraSiteContentClient = Pick<
   ExternalProjectsClient,
+  | "createAsset"
+  | "getAssetUrl"
   | "createCollection"
   | "createEntry"
   | "getStudio"
@@ -132,16 +135,30 @@ export async function saveKendraAdminSiteContent(
     workspaceId,
   );
   const current = readKendraAdminSiteContent(studio);
-  const payload = buildSiteContentEntryPayload(String(collection.id), content);
-
-  if (current.entryId) {
-    await client.updateEntry(workspaceId, current.entryId, payload);
-  } else {
-    await client.createEntry(workspaceId, payload);
+  let entryId = current.entryId;
+  if (!entryId) {
+    const created = await client.createEntry(
+      workspaceId,
+      buildSiteContentEntryPayload(String(collection.id), {
+        ...content,
+        site: { ...content.site, resumeUrl: "" },
+      }),
+    );
+    entryId = readCreatedEntryId(created);
+    if (!entryId) throw new Error("Site content entry is not available.");
   }
+  const resumeUrl = await resolveKendraResumeLink({
+    client, workspaceId, entryId, resumeUrl: content.site.resumeUrl,
+    assets: studio.assets,
+  });
+  const savedContent = { ...content, site: { ...content.site, resumeUrl } };
+  await client.updateEntry(
+    workspaceId, entryId,
+    buildSiteContentEntryPayload(String(collection.id), savedContent),
+  );
 
   revalidateKendraContent();
-  return content;
+  return savedContent;
 }
 
 export async function ensureKendraAdminSiteContentEntry(

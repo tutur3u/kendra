@@ -104,7 +104,7 @@ export function ProfileAndLinksSection({
         </div>
       </FormSection>
       <FormSection
-        description="External links used for resume and rate guidance."
+        description="Use a shareable resume link. A preview link from this site’s storage is converted to a permanent link when you save."
         kicker="Links"
         title="Resume and rates"
       >
